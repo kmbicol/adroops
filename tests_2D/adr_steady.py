@@ -29,12 +29,24 @@ from dolfin import *
 from fenics import *
 import numpy as np
 
+
+
+# Things for Kayla to modify
+nx = 40  # choices: 20,40,80
+N = 3        # choices: 0,1,2,3
+scale = 1 # choices: 1, np.sqrt(2), 2
+P = 1 # choices: 1 (means P1) , 2 (means P2)
+## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
+
 # Load mesh and subdomains
-mesh = UnitSquareMesh(20,20) # divides [0,1]x[0,1] into 20x20 
+ny = nx
+mesh = UnitSquareMesh(nx,ny) # divides [0,1]x[0,1] into 20x20 
 h = CellSize(mesh)
+delta = scale*h  # this is where we change the filtering radius
+
 
 # Create FunctionSpaces
-Q = FunctionSpace(mesh, "CG", 1)
+Q = FunctionSpace(mesh, "CG", P)
 
 # Initialise source function and previous solution function
 f  = Constant(1.0)
@@ -46,8 +58,9 @@ u_D = Constant(0.0)
 sigma = 0.01
 mu = 0.001
 velocity = as_vector([1.0, 1.0]) # this is b
-delta = h  # this is where we change the filtering radius
 
+
+print 'N = '+str(N)+' and h = 1/'+str(nx)
 # Test and trial functions
 u, v = TrialFunction(Q), TestFunction(Q)
 
@@ -78,12 +91,15 @@ def boundary(x, on_boundary):
 bc = DirichletBC(Q, u_D, boundary)
 
 # Output file
-out_file_u = File("results_steady/u.pvd")
-out_file_usupg = File("results_steady/u_SUPG.pvd")
-out_file_ugls = File("results_steady/u_GLS.pvd")
-out_file_utilde = File("results_steady/u_tilde.pvd")
-out_file_ubar = File("results_steady/u_bar.pvd")
-out_file_ind = File("results_steady/indicator.pvd")
+
+folder = "delta_"+str(scale)+"h_1_"+str(nx)+"/results_steadyN"+str(N)
+
+out_file_u = File(folder+"/u.pvd")
+out_file_usupg = File(folder+"/u_SUPG.pvd")
+out_file_ugls = File(folder+"/u_GLS.pvd")
+out_file_utilde = File(folder+"/u_tilde.pvd")
+out_file_ubar = File(folder+"/u_bar.pvd")
+out_file_ind = File(folder+"/indicator.pvd")
 
 # Assemble matrix
 A = assemble(a)
@@ -140,25 +156,91 @@ out_file_ugls << u_GLS
 
 # Helmholtz filter to compute the indicator function
 u_tilde = TrialFunction(Q)
-
+u_tilde0 = TrialFunction(Q)
+u_tilde1 = TrialFunction(Q)
+u_tilde2 = TrialFunction(Q)
+u_tilde3 = TrialFunction(Q)
 #deltaH = h*vnorm/(2*mu)
 
-F_Hfilter = v*u_tilde*dx + delta*delta*dot(grad(v), grad(u_tilde))*dx - v*u*dx 
+# at this point we already have solution u, looking for u_tilde which is the filtered u
 
-a_Hfilter = lhs(F_Hfilter)
-L_Hfilter = rhs(F_Hfilter)
+## ______________________________________________________________________ N=0
+F_Hfilter0 = v*u_tilde0*dx + delta*delta*dot(grad(v), grad(u_tilde0))*dx - v*u*dx
 
-A_Hfilter = assemble(a_Hfilter)
-bc.apply(A_Hfilter)
+a_Hfilter0 = lhs(F_Hfilter0)
+L_Hfilter0 = rhs(F_Hfilter0)
 
-b_Hfilter = assemble(L_Hfilter)
-bc.apply(b_Hfilter)
+A_Hfilter0 = assemble(a_Hfilter0)
+bc.apply(A_Hfilter0)
 
-solver = LUSolver(A_Hfilter)
-u_tilde = Function(Q)
-solver.solve(u_tilde.vector(), b_Hfilter)
+b_Hfilter0 = assemble(L_Hfilter0)
+bc.apply(b_Hfilter0)
 
-out_file_utilde << u_tilde
+solver0 = LUSolver(A_Hfilter0)
+u_tilde0 = Function(Q)
+solver0.solve(u_tilde0.vector(), b_Hfilter0)
+u_tilde = u_tilde0
+out_file_utilde << u_tilde0
+
+## ______________________________________________________________________ N=1
+if N>0:
+	F_Hfilter1 = v*u_tilde1*dx + delta*delta*dot(grad(v), grad(u_tilde1))*dx - v*u_tilde0*dx
+
+	a_Hfilter1 = lhs(F_Hfilter1)
+	L_Hfilter1 = rhs(F_Hfilter1)
+
+	A_Hfilter1 = assemble(a_Hfilter1)
+	bc.apply(A_Hfilter1)
+
+	b_Hfilter1 = assemble(L_Hfilter1)
+	bc.apply(b_Hfilter1)
+
+	solver1 = LUSolver(A_Hfilter1)
+	u_tilde1 = Function(Q)
+	solver1.solve(u_tilde1.vector(), b_Hfilter1)
+
+	u_tilde = u_tilde1
+	out_file_utilde << u_tilde1
+
+## ______________________________________________________________________ N=2
+if N>1:
+	F_Hfilter2 = v*u_tilde2*dx + delta*delta*dot(grad(v), grad(u_tilde2))*dx - v*u_tilde1*dx
+
+	a_Hfilter2 = lhs(F_Hfilter2)
+	L_Hfilter2 = rhs(F_Hfilter2)
+
+	A_Hfilter2 = assemble(a_Hfilter2)
+	bc.apply(A_Hfilter2)
+
+	b_Hfilter2 = assemble(L_Hfilter2)
+	bc.apply(b_Hfilter2)
+
+	solver2 = LUSolver(A_Hfilter2)
+	u_tilde2 = Function(Q)
+	solver2.solve(u_tilde2.vector(), b_Hfilter2)
+
+	u_tilde = u_tilde2
+	out_file_utilde << u_tilde2
+
+## ______________________________________________________________________ N=3
+if N>2:
+	F_Hfilter3 = v*u_tilde3*dx + delta*delta*dot(grad(v), grad(u_tilde3))*dx - v*u_tilde2*dx
+
+	a_Hfilter3 = lhs(F_Hfilter3)
+	L_Hfilter3 = rhs(F_Hfilter3)
+
+	A_Hfilter3 = assemble(a_Hfilter3)
+	bc.apply(A_Hfilter3)
+
+	b_Hfilter3 = assemble(L_Hfilter3)
+	bc.apply(b_Hfilter3)
+
+	solver3 = LUSolver(A_Hfilter3)
+	u_tilde3 = Function(Q)
+	solver3.solve(u_tilde3.vector(), b_Hfilter3)
+
+	u_tilde = u_tilde3
+	out_file_utilde << u_tilde3
 
 # Compute the indicator function N = 0
 indicator = Expression('sqrt((a-b)*(a-b))', degree = 2, a = u, b = u_tilde)
