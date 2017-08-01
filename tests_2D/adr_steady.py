@@ -30,7 +30,7 @@ from fenics import *
 import numpy as np
 
 # Load mesh and subdomains
-mesh = UnitSquareMesh(120,120)
+mesh = UnitSquareMesh(20,20) # divides [0,1]x[0,1] into 20x20 
 h = CellSize(mesh)
 
 # Create FunctionSpaces
@@ -39,14 +39,15 @@ Q = FunctionSpace(mesh, "CG", 1)
 # Initialise source function and previous solution function
 f  = Constant(1.0)
 
-# Boudanry values
+# Boundary values
 u_D = Constant(0.0)
 
 # Parameters
 sigma = 0.01
 mu = 0.001
-velocity = as_vector([1.0, 1.0])
-delta = h
+velocity = as_vector([1.0, 1.0]) # this is b
+delta = h  # this is where we change the filtering radius
+
 # Test and trial functions
 u, v = TrialFunction(Q), TestFunction(Q)
 
@@ -135,10 +136,13 @@ out_file_usupg << u_SUPG
 
 out_file_ugls << u_GLS
 
+##################################################################################
+
 # Helmholtz filter to compute the indicator function
 u_tilde = TrialFunction(Q)
 
 #deltaH = h*vnorm/(2*mu)
+
 F_Hfilter = v*u_tilde*dx + delta*delta*dot(grad(v), grad(u_tilde))*dx - v*u*dx 
 
 a_Hfilter = lhs(F_Hfilter)
