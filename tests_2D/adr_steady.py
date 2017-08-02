@@ -33,7 +33,7 @@ import numpy as np
 
 # Things for Kayla to modify
 nx = 20  # choices: 20,40,80
-N = 3       # choices: 0,1,2,3
+N = 0       # choices: 0,1,2,3
 scale = 1 # choices: 1, np.sqrt(2), 2
 P = 1 # choices: 1 (means P1) , 2 (means P2)
 ## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
@@ -60,7 +60,8 @@ mu = 0.001
 velocity = as_vector([1.0, 1.0]) # this is b
 
 
-print 'N = '+str(N)+' and h = 1/'+str(nx)
+string0 = 'N = '+str(N)+' and h = 1/'+str(nx)
+print string0
 # Test and trial functions
 u, v = TrialFunction(Q), TestFunction(Q)
 
@@ -277,14 +278,19 @@ solver.solve(u_bar.vector(), b_filter)
 # as seen in ft01_poisson.py
 
 nofilter_Linf_err = np.abs(u_SUPG.vector().array() - u.vector().array()).max()
-print 'nofilter_Linf_err = ', nofilter_Linf_err
+string1 = 'nofilter_Linf_err = ' + str(nofilter_Linf_err)
 filtered_Linf_err = np.abs(u_SUPG.vector().array() - u_bar.vector().array()).max()
-print 'filtered_Linf_err = ', filtered_Linf_err
-print ' '
+string2 = 'filtered_Linf_err = '+str(filtered_Linf_err)
+#print ' '
 
 nofilter_L2_err = errornorm(u_SUPG, u, 'L2')
-print  'nofilter_L2_err = ', nofilter_L2_err
+string3 = 'nofilter_L2_err = ' + str(nofilter_L2_err)
 filtered_L2_err = errornorm(u_SUPG,u_bar,'L2')
-print 'filtered_L2_err = ', filtered_L2_err
+string4 = 'filtered_L2_err = ' + str(filtered_L2_err)
 
 out_file_ubar << u_bar
+
+
+## _____Save error info to a textfile named data.txt
+f=open("data.txt","a+")
+f.write(string0+"\n \n"+string1+"\n"+string2+"\n"+string3+"\n"+string4+"\n \n")
