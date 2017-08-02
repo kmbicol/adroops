@@ -32,8 +32,8 @@ import numpy as np
 
 
 # Things for Kayla to modify
-nx = 40  # choices: 20,40,80
-N = 3        # choices: 0,1,2,3
+nx = 20  # choices: 20,40,80
+N = 0        # choices: 0,1,2,3
 scale = 1 # choices: 1, np.sqrt(2), 2
 P = 1 # choices: 1 (means P1) , 2 (means P2)
 ## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
@@ -126,19 +126,19 @@ solver = LUSolver(A)
 u = Function(Q)
 solver.solve(u.vector(), b)
 
-print 'norm_u_L2  =',   norm(u, 'L2')
+#print 'norm_u_L2  =',   norm(u, 'L2')
 
 solver = LUSolver(A_SUPG)
 u_SUPG = Function(Q)
 solver.solve(u_SUPG.vector(), b_SUPG)
 
-print 'norm_u_SUPG_L2  =',   norm(u_SUPG, 'L2')
+#print 'norm_u_SUPG_L2  =',   norm(u_SUPG, 'L2')
 
 solver = LUSolver(A_GLS)
 u_GLS = Function(Q)
 solver.solve(u_GLS.vector(), b_GLS)
 
-print 'norm_u_GLS_L2  =',   norm(u_GLS, 'L2')
+#print 'norm_u_GLS_L2  =',   norm(u_GLS, 'L2')
 
 # Compute difference between SUPG and GLS solution in L2 norm
 #diff_SUPG_GLS_L2 = norm(u_SUPG.vector() - u_GLS.vector(), 'L2')/norm(u_SUPG.vector(), 'L2')
@@ -156,16 +156,16 @@ out_file_ugls << u_GLS
 
 # Helmholtz filter to compute the indicator function
 u_tilde = TrialFunction(Q)
-u_tilde0 = TrialFunction(Q)
-u_tilde1 = TrialFunction(Q)
-u_tilde2 = TrialFunction(Q)
-u_tilde3 = TrialFunction(Q)
+u_1tilde = TrialFunction(Q)
+u_2tilde = TrialFunction(Q)
+u_3tilde = TrialFunction(Q)
+u_4tilde = TrialFunction(Q)
 #deltaH = h*vnorm/(2*mu)
 
 # at this point we already have solution u, looking for u_tilde which is the filtered u
 
 ## ______________________________________________________________________ N=0
-F_Hfilter0 = v*u_tilde0*dx + delta*delta*dot(grad(v), grad(u_tilde0))*dx - v*u*dx
+F_Hfilter0 = v*u_1tilde*dx + delta*delta*dot(grad(v), grad(u_1tilde))*dx - v*u*dx
 
 a_Hfilter0 = lhs(F_Hfilter0)
 L_Hfilter0 = rhs(F_Hfilter0)
@@ -177,14 +177,14 @@ b_Hfilter0 = assemble(L_Hfilter0)
 bc.apply(b_Hfilter0)
 
 solver0 = LUSolver(A_Hfilter0)
-u_tilde0 = Function(Q)
-solver0.solve(u_tilde0.vector(), b_Hfilter0)
-u_tilde = u_tilde0
-out_file_utilde << u_tilde0
+u_1tilde = Function(Q)
+solver0.solve(u_1tilde.vector(), b_Hfilter0)
+u_tilde = u_1tilde
+out_file_utilde << u_1tilde
 
 ## ______________________________________________________________________ N=1
 if N>0:
-	F_Hfilter1 = v*u_tilde1*dx + delta*delta*dot(grad(v), grad(u_tilde1))*dx - v*u_tilde0*dx
+	F_Hfilter1 = v*u_2tilde*dx + delta*delta*dot(grad(v), grad(u_2tilde))*dx - v*u_1tilde*dx
 
 	a_Hfilter1 = lhs(F_Hfilter1)
 	L_Hfilter1 = rhs(F_Hfilter1)
@@ -196,15 +196,15 @@ if N>0:
 	bc.apply(b_Hfilter1)
 
 	solver1 = LUSolver(A_Hfilter1)
-	u_tilde1 = Function(Q)
-	solver1.solve(u_tilde1.vector(), b_Hfilter1)
+	u_2tilde = Function(Q)
+	solver1.solve(u_2tilde.vector(), b_Hfilter1)
 
-	u_tilde = u_tilde1
-	out_file_utilde << u_tilde1
+	u_tilde = u_2tilde
+	out_file_utilde << u_2tilde
 
 ## ______________________________________________________________________ N=2
 if N>1:
-	F_Hfilter2 = v*u_tilde2*dx + delta*delta*dot(grad(v), grad(u_tilde2))*dx - v*u_tilde1*dx
+	F_Hfilter2 = v*u_3tilde*dx + delta*delta*dot(grad(v), grad(u_3tilde))*dx - v*u_2tilde*dx
 
 	a_Hfilter2 = lhs(F_Hfilter2)
 	L_Hfilter2 = rhs(F_Hfilter2)
@@ -216,15 +216,15 @@ if N>1:
 	bc.apply(b_Hfilter2)
 
 	solver2 = LUSolver(A_Hfilter2)
-	u_tilde2 = Function(Q)
-	solver2.solve(u_tilde2.vector(), b_Hfilter2)
+	u_3tilde = Function(Q)
+	solver2.solve(u_3tilde.vector(), b_Hfilter2)
 
-	u_tilde = u_tilde2
-	out_file_utilde << u_tilde2
+	u_tilde = u_3tilde
+	out_file_utilde << u_3tilde
 
 ## ______________________________________________________________________ N=3
 if N>2:
-	F_Hfilter3 = v*u_tilde3*dx + delta*delta*dot(grad(v), grad(u_tilde3))*dx - v*u_tilde2*dx
+	F_Hfilter3 = v*u_4tilde*dx + delta*delta*dot(grad(v), grad(u_4tilde))*dx - v*u_3tilde*dx
 
 	a_Hfilter3 = lhs(F_Hfilter3)
 	L_Hfilter3 = rhs(F_Hfilter3)
@@ -236,13 +236,14 @@ if N>2:
 	bc.apply(b_Hfilter3)
 
 	solver3 = LUSolver(A_Hfilter3)
-	u_tilde3 = Function(Q)
-	solver3.solve(u_tilde3.vector(), b_Hfilter3)
+	u_4tilde = Function(Q)
+	solver3.solve(u_4tilde.vector(), b_Hfilter3)
 
-	u_tilde = u_tilde3
-	out_file_utilde << u_tilde3
+	u_tilde = u_4tilde
+	out_file_utilde << u_4tilde
 
 # Compute the indicator function N = 0
+# NEED TO FIX THIS SECTION
 indicator = Expression('sqrt((a-b)*(a-b))', degree = 2, a = u, b = u_tilde)
 indicator = interpolate(indicator, Q)
 max_ind = np.amax(indicator.vector().array())
@@ -272,6 +273,21 @@ solver = LUSolver(A_filter)
 u_bar = Function(Q)
 solver.solve(u_bar.vector(), b_filter)
 
-print 'norm_u_bar_L2  =',   norm(u_bar, 'L2')
+#print 'norm_u_bar_L2  =',   norm(u_bar, 'L2')
+
+##   ----- Calculate L-2 and L-inf error norms using SUPG as true solution
+# as seen in ft01_poisson.py
+
+nofilter_Linf_err = np.abs(u_SUPG.vector().array() - u.vector().array()).max()
+print 'nofilter_Linf_err = ', nofilter_Linf_err
+
+nofilter_L2_err = errornorm(u_SUPG, u, 'L2')
+print  'nofilter_L2_err = ', nofilter_L2_err
+
+filtered_Linf_err = np.abs(u_SUPG.vector().array() - u_bar.vector().array()).max()
+print 'filtered_Linf_err = ', filtered_Linf_err
+
+filtered_L2_err = errornorm(u_SUPG,u_bar,'L2')
+print 'filtered_L2_err = ', filtered_L2_err
 
 out_file_ubar << u_bar
