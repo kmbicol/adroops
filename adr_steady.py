@@ -1,0 +1,277 @@
+# Copyright (C) 2007 Kristian B. Oelgaard
+#
+# This file is part of DOLFIN.
+#
+# DOLFIN is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# DOLFIN is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with DOLFIN. If not, see <http://www.gnu.org/licenses/>.
+#
+# Modified by Anders Logg, 2008
+# Modified by Johan Hake, 2008
+# Modified by Garth N. Wells, 2009
+#
+# This demo solves the time-dependent convection-diffusion equation by
+# a SUPG stabilized method. The velocity field used in the simulation
+# is the output from the Stokes (Taylor-Hood) demo.  The sub domains
+# for the different boundary conditions are computed by the demo
+# program in src/demo/subdomains.
+
+from dolfin import *
+from fenics import *
+import numpy as np
+
+
+
+# Things for Kayla to modify
+nx = 40  # choices: 20,40,80
+N = 3        # choices: 0,1,2,3
+scale = 1 # choices: 1, np.sqrt(2), 2
+P = 1 # choices: 1 (means P1) , 2 (means P2)
+## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
+
+# Load mesh and subdomains
+ny = nx
+mesh = UnitSquareMesh(nx,ny) # divides [0,1]x[0,1] into 20x20 
+h = CellSize(mesh)
+delta = scale*h  # this is where we change the filtering radius
+
+
+# Create FunctionSpaces
+Q = FunctionSpace(mesh, "CG", P)
+
+# Initialise source function and previous solution function
+f  = Constant(1.0)
+
+# Boundary values
+u_D = Constant(0.0)
+
+# Parameters
+sigma = 0.01
+mu = 0.001
+velocity = as_vector([1.0, 1.0]) # this is b
+
+
+print 'N = '+str(N)+' and h = 1/'+str(nx)
+# Test and trial functions
+u, v = TrialFunction(Q), TestFunction(Q)
+
+# Residual
+r = - mu*div(grad(u)) + dot(velocity, grad(u)) + sigma*u - f
+
+# Galerkin variational problem
+F = mu*dot(grad(v), grad(u))*dx + v*dot(velocity, grad(u))*dx + sigma*v*u*dx - f*v*dx
+
+# SUPG stabilisation terms
+vnorm = sqrt(dot(velocity, velocity))
+F_SUPG = F + (h/(2.0*vnorm))*dot(velocity, grad(v))*r*dx
+
+# GLS stabilization terms
+F_GLS = F + (h/(2.0*vnorm))*(dot(velocity, grad(v)) - mu*div(grad(v)) + sigma*v)*r*dx
+
+# Create bilinear and linear forms
+a = lhs(F)
+L = rhs(F)
+a_SUPG = lhs(F_SUPG)
+L_SUPG = rhs(F_SUPG)
+a_GLS = lhs(F_GLS)
+L_GLS = rhs(F_GLS)
+
+# Set up boundary condition
+def boundary(x, on_boundary):
+    return on_boundary
+bc = DirichletBC(Q, u_D, boundary)
+
+# Output file
+
+folder = "delta_"+str(scale)+"h_1_"+str(nx)+"/results_steadyN"+str(N)
+
+out_file_u = File(folder+"/u.pvd")
+out_file_usupg = File(folder+"/u_SUPG.pvd")
+out_file_ugls = File(folder+"/u_GLS.pvd")
+out_file_utilde = File(folder+"/u_tilde.pvd")
+out_file_ubar = File(folder+"/u_bar.pvd")
+out_file_ind = File(folder+"/indicator.pvd")
+
+# Assemble matrix
+A = assemble(a)
+bc.apply(A)
+
+A_SUPG = assemble(a_SUPG)
+bc.apply(A_SUPG)
+
+A_GLS = assemble(a_GLS)
+bc.apply(A_GLS)
+
+# Assemble vector and apply boundary conditions
+b = assemble(L)
+bc.apply(b)
+
+b_SUPG = assemble(L_SUPG)
+bc.apply(b_SUPG)
+
+b_GLS = assemble(L_GLS)
+bc.apply(b_GLS)
+
+# Create linear solver and factorize matrix
+solver = LUSolver(A)
+u = Function(Q)
+solver.solve(u.vector(), b)
+
+print 'norm_u_L2  =',   norm(u, 'L2')
+
+solver = LUSolver(A_SUPG)
+u_SUPG = Function(Q)
+solver.solve(u_SUPG.vector(), b_SUPG)
+
+print 'norm_u_SUPG_L2  =',   norm(u_SUPG, 'L2')
+
+solver = LUSolver(A_GLS)
+u_GLS = Function(Q)
+solver.solve(u_GLS.vector(), b_GLS)
+
+print 'norm_u_GLS_L2  =',   norm(u_GLS, 'L2')
+
+# Compute difference between SUPG and GLS solution in L2 norm
+#diff_SUPG_GLS_L2 = norm(u_SUPG.vector() - u_GLS.vector(), 'L2')/norm(u_SUPG.vector(), 'L2')
+#print 'difference_SUPG_GLS_L2  =', diff_SUPG_GLS_L2 
+
+# Save the solution to file
+
+out_file_u << u
+
+out_file_usupg << u_SUPG
+
+out_file_ugls << u_GLS
+
+##################################################################################
+
+# Helmholtz filter to compute the indicator function
+u_tilde = TrialFunction(Q)
+u_tilde0 = TrialFunction(Q)
+u_tilde1 = TrialFunction(Q)
+u_tilde2 = TrialFunction(Q)
+u_tilde3 = TrialFunction(Q)
+#deltaH = h*vnorm/(2*mu)
+
+# at this point we already have solution u, looking for u_tilde which is the filtered u
+
+## ______________________________________________________________________ N=0
+F_Hfilter0 = v*u_tilde0*dx + delta*delta*dot(grad(v), grad(u_tilde0))*dx - v*u*dx
+
+a_Hfilter0 = lhs(F_Hfilter0)
+L_Hfilter0 = rhs(F_Hfilter0)
+
+A_Hfilter0 = assemble(a_Hfilter0)
+bc.apply(A_Hfilter0)
+
+b_Hfilter0 = assemble(L_Hfilter0)
+bc.apply(b_Hfilter0)
+
+solver0 = LUSolver(A_Hfilter0)
+u_tilde0 = Function(Q)
+solver0.solve(u_tilde0.vector(), b_Hfilter0)
+u_tilde = u_tilde0
+out_file_utilde << u_tilde0
+
+## ______________________________________________________________________ N=1
+if N>0:
+	F_Hfilter1 = v*u_tilde1*dx + delta*delta*dot(grad(v), grad(u_tilde1))*dx - v*u_tilde0*dx
+
+	a_Hfilter1 = lhs(F_Hfilter1)
+	L_Hfilter1 = rhs(F_Hfilter1)
+
+	A_Hfilter1 = assemble(a_Hfilter1)
+	bc.apply(A_Hfilter1)
+
+	b_Hfilter1 = assemble(L_Hfilter1)
+	bc.apply(b_Hfilter1)
+
+	solver1 = LUSolver(A_Hfilter1)
+	u_tilde1 = Function(Q)
+	solver1.solve(u_tilde1.vector(), b_Hfilter1)
+
+	u_tilde = u_tilde1
+	out_file_utilde << u_tilde1
+
+## ______________________________________________________________________ N=2
+if N>1:
+	F_Hfilter2 = v*u_tilde2*dx + delta*delta*dot(grad(v), grad(u_tilde2))*dx - v*u_tilde1*dx
+
+	a_Hfilter2 = lhs(F_Hfilter2)
+	L_Hfilter2 = rhs(F_Hfilter2)
+
+	A_Hfilter2 = assemble(a_Hfilter2)
+	bc.apply(A_Hfilter2)
+
+	b_Hfilter2 = assemble(L_Hfilter2)
+	bc.apply(b_Hfilter2)
+
+	solver2 = LUSolver(A_Hfilter2)
+	u_tilde2 = Function(Q)
+	solver2.solve(u_tilde2.vector(), b_Hfilter2)
+
+	u_tilde = u_tilde2
+	out_file_utilde << u_tilde2
+
+## ______________________________________________________________________ N=3
+if N>2:
+	F_Hfilter3 = v*u_tilde3*dx + delta*delta*dot(grad(v), grad(u_tilde3))*dx - v*u_tilde2*dx
+
+	a_Hfilter3 = lhs(F_Hfilter3)
+	L_Hfilter3 = rhs(F_Hfilter3)
+
+	A_Hfilter3 = assemble(a_Hfilter3)
+	bc.apply(A_Hfilter3)
+
+	b_Hfilter3 = assemble(L_Hfilter3)
+	bc.apply(b_Hfilter3)
+
+	solver3 = LUSolver(A_Hfilter3)
+	u_tilde3 = Function(Q)
+	solver3.solve(u_tilde3.vector(), b_Hfilter3)
+
+	u_tilde = u_tilde3
+	out_file_utilde << u_tilde3
+
+# Compute the indicator function N = 0
+indicator = Expression('sqrt((a-b)*(a-b))', degree = 2, a = u, b = u_tilde)
+indicator = interpolate(indicator, Q)
+max_ind = np.amax(indicator.vector().array())
+
+if max_ind < 1:
+   max_ind = 1.0
+
+indicator = Expression('a/b', degree = 2, a = indicator, b = max_ind)
+indicator = interpolate(indicator, Q)
+
+out_file_ind << indicator
+
+# Apply the filter
+u_bar = TrialFunction(Q)
+F_filter = v*u_bar*dx + delta*delta*dot(grad(v), indicator*grad(u_bar))*dx - v*u*dx 
+
+a_filter = lhs(F_filter)
+L_filter = rhs(F_filter)
+
+A_filter = assemble(a_filter)
+bc.apply(A_filter)
+
+b_filter = assemble(L_filter)
+bc.apply(b_filter)
+
+solver = LUSolver(A_filter)
+u_bar = Function(Q)
+solver.solve(u_bar.vector(), b_filter)
+
+print 'norm_u_bar_L2  =',   norm(u_bar, 'L2')
+
+out_file_ubar << u_bar
