@@ -33,7 +33,7 @@ import numpy as np
 
 # Things for Kayla to modify
 nx = 20  # choices: 20,40,80
-N = 0        # choices: 0,1,2,3
+N = 3       # choices: 0,1,2,3
 scale = 1 # choices: 1, np.sqrt(2), 2
 P = 1 # choices: 1 (means P1) , 2 (means P2)
 ## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
@@ -162,7 +162,6 @@ u_3tilde = TrialFunction(Q)
 u_4tilde = TrialFunction(Q)
 #deltaH = h*vnorm/(2*mu)
 
-# at this point we already have solution u, looking for u_tilde which is the filtered u
 
 ## ______________________________________________________________________ N=0
 F_Hfilter0 = v*u_1tilde*dx + delta*delta*dot(grad(v), grad(u_1tilde))*dx - v*u*dx
@@ -179,7 +178,7 @@ bc.apply(b_Hfilter0)
 solver0 = LUSolver(A_Hfilter0)
 u_1tilde = Function(Q)
 solver0.solve(u_1tilde.vector(), b_Hfilter0)
-u_tilde = u_1tilde
+DF = u_1tilde
 out_file_utilde << u_1tilde
 
 ## ______________________________________________________________________ N=1
@@ -198,56 +197,54 @@ if N>0:
 	solver1 = LUSolver(A_Hfilter1)
 	u_2tilde = Function(Q)
 	solver1.solve(u_2tilde.vector(), b_Hfilter1)
-
-	u_tilde = u_2tilde
+	DF = Expression('a+b-c',degree=2,a=DF,b=u_1tilde,c=u_2tilde)
 	out_file_utilde << u_2tilde
 
 ## ______________________________________________________________________ N=2
-if N>1:
-	F_Hfilter2 = v*u_3tilde*dx + delta*delta*dot(grad(v), grad(u_3tilde))*dx - v*u_2tilde*dx
+	if N>1:
+		F_Hfilter2 = v*u_3tilde*dx + delta*delta*dot(grad(v), grad(u_3tilde))*dx - v*u_2tilde*dx
 
-	a_Hfilter2 = lhs(F_Hfilter2)
-	L_Hfilter2 = rhs(F_Hfilter2)
+		a_Hfilter2 = lhs(F_Hfilter2)
+		L_Hfilter2 = rhs(F_Hfilter2)
 
-	A_Hfilter2 = assemble(a_Hfilter2)
-	bc.apply(A_Hfilter2)
+		A_Hfilter2 = assemble(a_Hfilter2)
+		bc.apply(A_Hfilter2)
 
-	b_Hfilter2 = assemble(L_Hfilter2)
-	bc.apply(b_Hfilter2)
+		b_Hfilter2 = assemble(L_Hfilter2)
+		bc.apply(b_Hfilter2)
 
-	solver2 = LUSolver(A_Hfilter2)
-	u_3tilde = Function(Q)
-	solver2.solve(u_3tilde.vector(), b_Hfilter2)
-
-	u_tilde = u_3tilde
-	out_file_utilde << u_3tilde
+		solver2 = LUSolver(A_Hfilter2)
+		u_3tilde = Function(Q)
+		solver2.solve(u_3tilde.vector(), b_Hfilter2)
+		DF = Expression('a+b-2*c+d',degree=2,a=DF,b=u_1tilde,c=u_2tilde,d=u_3tilde)
+		out_file_utilde << u_3tilde
 
 ## ______________________________________________________________________ N=3
-if N>2:
-	F_Hfilter3 = v*u_4tilde*dx + delta*delta*dot(grad(v), grad(u_4tilde))*dx - v*u_3tilde*dx
+		if N>2:
+			F_Hfilter3 = v*u_4tilde*dx + delta*delta*dot(grad(v), grad(u_4tilde))*dx - v*u_3tilde*dx
 
-	a_Hfilter3 = lhs(F_Hfilter3)
-	L_Hfilter3 = rhs(F_Hfilter3)
+			a_Hfilter3 = lhs(F_Hfilter3)
+			L_Hfilter3 = rhs(F_Hfilter3)
 
-	A_Hfilter3 = assemble(a_Hfilter3)
-	bc.apply(A_Hfilter3)
+			A_Hfilter3 = assemble(a_Hfilter3)
+			bc.apply(A_Hfilter3)
 
-	b_Hfilter3 = assemble(L_Hfilter3)
-	bc.apply(b_Hfilter3)
+			b_Hfilter3 = assemble(L_Hfilter3)
+			bc.apply(b_Hfilter3)
 
-	solver3 = LUSolver(A_Hfilter3)
-	u_4tilde = Function(Q)
-	solver3.solve(u_4tilde.vector(), b_Hfilter3)
+			solver3 = LUSolver(A_Hfilter3)
+			u_4tilde = Function(Q)
+			solver3.solve(u_4tilde.vector(), b_Hfilter3)
+			DF = Expression('a+b-3*c+3*d-e',degree=2,a=DF,b=u_1tilde,c=u_2tilde,d=u_3tilde,e=u_4tilde)
+			out_file_utilde << u_4tilde
 
-	u_tilde = u_4tilde
-	out_file_utilde << u_4tilde
+# Compute the indicator function
 
-# Compute the indicator function N = 0
-# NEED TO FIX THIS SECTION
-indicator = Expression('sqrt((a-b)*(a-b))', degree = 2, a = u, b = u_tilde)
+indicator = Expression('sqrt((a-b)*(a-b))', degree = 2, a = u, b = DF)
 indicator = interpolate(indicator, Q)
 max_ind = np.amax(indicator.vector().array())
 
+# Normalize indicator such that it's between [0,1].
 if max_ind < 1:
    max_ind = 1.0
 
@@ -255,6 +252,7 @@ indicator = Expression('a/b', degree = 2, a = indicator, b = max_ind)
 indicator = interpolate(indicator, Q)
 
 out_file_ind << indicator
+
 
 # Apply the filter
 u_bar = TrialFunction(Q)
@@ -280,13 +278,12 @@ solver.solve(u_bar.vector(), b_filter)
 
 nofilter_Linf_err = np.abs(u_SUPG.vector().array() - u.vector().array()).max()
 print 'nofilter_Linf_err = ', nofilter_Linf_err
+filtered_Linf_err = np.abs(u_SUPG.vector().array() - u_bar.vector().array()).max()
+print 'filtered_Linf_err = ', filtered_Linf_err
+print ' '
 
 nofilter_L2_err = errornorm(u_SUPG, u, 'L2')
 print  'nofilter_L2_err = ', nofilter_L2_err
-
-filtered_Linf_err = np.abs(u_SUPG.vector().array() - u_bar.vector().array()).max()
-print 'filtered_Linf_err = ', filtered_Linf_err
-
 filtered_L2_err = errornorm(u_SUPG,u_bar,'L2')
 print 'filtered_L2_err = ', filtered_L2_err
 
