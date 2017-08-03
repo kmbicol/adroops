@@ -32,9 +32,9 @@ import numpy as np
 
 
 # Things for Kayla to modify
-nx = 80  # choices: 20,40,80
-N = 3    # choices: 0,1,2,3
-scale = 2 # choices: 1, np.sqrt(2), 2
+nx = 20  # choices: 20,40,80
+N = 1    # choices: 0,1,2,3
+scale = 1 # choices: 1, np.sqrt(2), 2
 P = 1 # choices: 1 (means P1) , 2 (means P2)
 ## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
 
@@ -94,14 +94,18 @@ bc = DirichletBC(Q, u_D, boundary)
 # Output file
 if scale == np.sqrt(2):
 	scale = 'sqrt2'
-folder = "delta_"+str(scale)+"h_1_"+str(nx)+"/results_steadyN"+str(N)
 
-out_file_u = File(folder+"/u.pvd")
-out_file_usupg = File(folder+"/u_SUPG.pvd")
-out_file_ugls = File(folder+"/u_GLS.pvd")
+folder = "h1_"+str(nx)+"_delta"+str(scale)+"h"
+before = "/N"+str(N)
+after = "_h1_"+str(nx)+"_delta"+str(scale)+"h_"
+
+out_file_u = File(folder+"/u_"+"h_"+str(nx)+".pvd")
+out_file_usupg = File(folder+"/u_SUPG_"+"h_"+str(nx)+".pvd")
+out_file_ugls = File(folder+"/u_GLS_"+"h_"+str(nx)+".pvd")
+
 out_file_utilde = File(folder+"/u_tilde.pvd")
-out_file_ubar = File(folder+"/u_bar.pvd")
-out_file_ind = File(folder+"/indicator.pvd")
+out_file_ubar = File(folder+before+after+"u_bar.pvd")
+out_file_ind = File(folder+before+after+"a.pvd") #indicator
 
 # Assemble matrix
 A = assemble(a)
@@ -291,7 +295,9 @@ string4 = 'filtered_L2_err = ' + str(filtered_L2_err)
 
 out_file_ubar << u_bar
 
+output = string0+"\n \n"+string1+"\n"+string2+"\n"+string3+"\n"+string4+"\n \n"
 
+print output
 ## _____Save error info to a textfile named data.txt
-f=open("data.txt","a+")
-f.write(string0+"\n \n"+string1+"\n"+string2+"\n"+string3+"\n"+string4+"\n \n")
+#f=open("data.txt","a+")
+#f.write(output)
