@@ -314,7 +314,7 @@ for nx in list_of_nx:
 
 				#print output
 ## _____Uncomment to save error info to a textfile named data.txt
-'''
+				'''
 				f=open("P2_data.txt","a+")
 				f.write(output)
-'''
+				'''
