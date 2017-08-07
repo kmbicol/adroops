@@ -34,7 +34,7 @@ import numpy as np
 list_of_nx = [20, 40, 80]
 list_of_N = [0,1,2,3]    # choices: 0,1,2,3
 list_of_scale = [1, np.sqrt(2), 2] # choices: 1, np.sqrt(2), 2
-P = 2 # choices: 1 (means P1) , 2 (means P2)
+P = 1 # choices: 1 (means P1) , 2 (means P2)
 
 
 
@@ -47,7 +47,7 @@ P = 2 # choices: 1 (means P1) , 2 (means P2)
 """
 
 for nx in list_of_nx:
-	f=open("P2_data.txt","a+")
+	f=open("P1_data.txt","a+")
 	f.write("--------------------------------h=1/"+str(nx)+"\n")
 	for N in list_of_N:
 			for scale in list_of_scale:
@@ -109,7 +109,9 @@ for nx in list_of_nx:
 				if scale == np.sqrt(2):
 					scale = 'sqrt2'
 
-				folder = "P2_h1_"+str(nx)+"_delta"+str(scale)+"h"
+				folder = "h1_"+str(nx)+"_delta"+str(scale)+"h"
+				if P==2:
+					folder = "P2+"folder
 				before = "/N"+str(N)
 				after = "_h1_"+str(nx)+"_delta"+str(scale)+"h_"
 
