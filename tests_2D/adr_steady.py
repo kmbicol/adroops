@@ -30,23 +30,25 @@ from fenics import *
 import numpy as np
 
 
-"""
-# Things for Kayla to modify
-nx = 20  # choices: 20,40,80
-N = 1    # choices: 0,1,2,3
-scale = 1 # choices: 1, np.sqrt(2), 2
-P = 1 # choices: 1 (means P1) , 2 (means P2)
-## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
-"""
-# Attempt to automate
+# Automated multiple solutions
 list_of_nx = [20, 40, 80]
 list_of_N = [0,1,2,3]    # choices: 0,1,2,3
 list_of_scale = [1, np.sqrt(2), 2] # choices: 1, np.sqrt(2), 2
-P = 1 # choices: 1 (means P1) , 2 (means P2)
-#
+P = 2 # choices: 1 (means P1) , 2 (means P2)
 
+
+
+"""
+# One simulation at a time
+list_of_nx = [20]
+list_of_N = [0]    # choices: 0,1,2,3
+list_of_scale = [1] # choices: 1, np.sqrt(2), 2
+P = 2 # choices: 1 (means P1) , 2 (means P2)
+"""
 
 for nx in list_of_nx:
+	f=open("P2_data.txt","a+")
+	f.write("--------------------------------h=1/"+str(nx)+"\n")
 	for N in list_of_N:
 			for scale in list_of_scale:
 	
@@ -73,7 +75,7 @@ for nx in list_of_nx:
 
 
 				string0 = 'N = '+str(N)+' and h = 1/'+str(nx)
-				print string0
+				#print string0
 				# Test and trial functions
 				u, v = TrialFunction(Q), TestFunction(Q)
 
@@ -107,7 +109,7 @@ for nx in list_of_nx:
 				if scale == np.sqrt(2):
 					scale = 'sqrt2'
 
-				folder = "h1_"+str(nx)+"_delta"+str(scale)+"h"
+				folder = "P2_h1_"+str(nx)+"_delta"+str(scale)+"h"
 				before = "/N"+str(N)
 				after = "_h1_"+str(nx)+"_delta"+str(scale)+"h_"
 
@@ -303,13 +305,16 @@ for nx in list_of_nx:
 				nofilter_L2_err = errornorm(u_SUPG, u, 'L2')
 				string3 = 'nofilter_L2_err = ' + str(nofilter_L2_err)
 				filtered_L2_err = errornorm(u_SUPG,u_bar,'L2')
-				string4 = 'filtered_L2_err = ' + str(filtered_L2_err)
+				filtered_L2again_err = Expression('sqrt((a-b)*(a-b))', degree = 2, a = u_SUPG, b = u_bar)
+				string4 = 'filtered_L2_err = ' + str(filtered_L2_err)+'check if different to:'+str(filtered_L2again_err)
 
 				out_file_ubar << u_bar
 
 				output = string0+"\n \n"+string1+"\n"+string2+"\n"+string3+"\n"+string4+"\n \n"
 
-				print output
-## _____Save error info to a textfile named data.txt
-#f=open("data.txt","a+")
-#f.write(output)
+				#print output
+## _____Uncomment to save error info to a textfile named data.txt
+'''
+				f=open("P2_data.txt","a+")
+				f.write(output)
+'''
