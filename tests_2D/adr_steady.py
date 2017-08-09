@@ -56,7 +56,7 @@ for nx in list_of_nx:
 				ny = nx
 				mesh = UnitSquareMesh(nx,ny) # divides [0,1]x[0,1] into 20x20 
 				h = CellSize(mesh)
-				delta = scale*h  # this is where we change the filtering radius
+				delta = scale*(1/nx)  # this is where we change the filtering radius
 
 
 				# Create FunctionSpaces
