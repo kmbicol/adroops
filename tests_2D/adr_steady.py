@@ -48,8 +48,8 @@ P = 1 # choices: 1 (means P1) , 2 (means P2)
 f=open("P"+str(P)+"_infnorm.txt","a+")
 g=open("P"+str(P)+"_2norm.txt","a+")
 
-f.write("L inf-norm & No Filter & $N=0$ & $N=1$ & $N=2$ & $N=3$ \n")
-g.write("L 2-norm & No Filter & $N=0$ & $N=1$ & $N=2$ & $N=3$ \n")
+f.write("L inf-norm & No Filter & $N=0$ & $N=1$ & $N=2$ & $N=3$ \\\\ \n \\hline \n")
+g.write("L 2-norm & No Filter & $N=0$ & $N=1$ & $N=2$ & $N=3$ \\\\ \n \\hline \n")
 
 for nx in list_of_nx:
 	#f=open("P"+str(P)+"_data.txt","a+")
@@ -304,24 +304,26 @@ for nx in list_of_nx:
 				##   ----- Calculate L-2 and L-inf error norms using SUPG as true solution
 				# as seen in ft01_poisson.py
 
-
-
+				if scalename == 'sqrt2':
+					scalename = '\sqrt{2}'
+				if scalename == 1:
+					scalename = ' '
 				if N==0:
 					nofilter_Linf_err = np.abs(u_SUPG.vector().array() - u.vector().array()).max()
 					filtered_Linf_err = np.abs(u_SUPG.vector().array() - u_bar.vector().array()).max()
 					nofilter_L2_err = errornorm(u_SUPG, u, 'L2')
 					filtered_L2_err = errornorm(u_SUPG,u_bar,'L2')
-					firstcol = "h=1/"+str(nx)+", "+"\delta = "+str(scalename)+"h "
-					outputf = firstcol+"& "+str(nofilter_Linf_err)+" & "+str(filtered_Linf_err)
-					outputg = firstcol+"& "+str(nofilter_L2_err)+" & "+str(filtered_L2_err)
+					firstcol = "$h=1/"+str(nx)+"$, "+"$\delta = "+str(scalename)+"h $"
+					outputf = firstcol+"& "+str(round(nofilter_Linf_err,4))+" & "+str(round(filtered_Linf_err,4))
+					outputg = firstcol+"& "+str(round(nofilter_L2_err,4))+" & "+str(round(filtered_L2_err,4))
 				if N >0:				
 					filtered_Linf_err = np.abs(u_SUPG.vector().array() - u_bar.vector().array()).max()
 					filtered_L2_err = errornorm(u_SUPG,u_bar,'L2')	
-					outputf = " & "+str(filtered_Linf_err)
-					outputg = " & "+str(filtered_L2_err)
+					outputf = " & "+str(round(filtered_Linf_err,4))
+					outputg = " & "+str(round(filtered_L2_err,4))
 					if N==3:
-						outputf = outputf+"  \\\\ \n"	
-						outputg = outputg+"  \\\\ \n"
+						outputf = outputf+"  \\\\ \n \\hline \n"	
+						outputg = outputg+"  \\\\ \n \\hline \n"
 				f=open("P"+str(P)+"_infnorm.txt","a+")
 				g=open("P"+str(P)+"_2norm.txt","a+")			
 				f.write(outputf)
