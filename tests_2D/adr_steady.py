@@ -28,37 +28,41 @@
 from dolfin import *
 from fenics import *
 import numpy as np
-
+import math
 
 # Automated multiple solutions
 list_of_nx = [20, 40, 80]
 list_of_N = [0,1,2,3]    # choices: 0,1,2,3
-list_of_scale = [1, np.sqrt(2), 2] # choices: 1, np.sqrt(2), 2
+list_of_scale = [1 , np.sqrt(2), 2] # choices: 1, np.sqrt(2), 2
 P = 1 # choices: 1 (means P1) , 2 (means P2)
 
+'''
 
 
-"""
 # One simulation at a time
-list_of_nx = [20]
-list_of_N = [0]    # choices: 0,1,2,3
-list_of_scale = [1] # choices: 1, np.sqrt(2), 2
-P = 2 # choices: 1 (means P1) , 2 (means P2)
-"""
+list_of_nx = [50]
+list_of_N = [3]    # choices: 0,1,2,3
+list_of_scale = [2.0] # choices: 1, np.sqrt(2), 2
+P = 1 # choices: 1 (means P1) , 2 (means P2)
+'''
+f=open("P"+str(P)+"_infnorm.txt","a+")
+g=open("P"+str(P)+"_2norm.txt","a+")
+
+f.write("L inf-norm & No Filter & $N=0$ & $N=1$ & $N=2$ & $N=3$ \n")
+g.write("L 2-norm & No Filter & $N=0$ & $N=1$ & $N=2$ & $N=3$ \n")
 
 for nx in list_of_nx:
-	f=open("P1_data.txt","a+")
-	f.write("--------------------------------h=1/"+str(nx)+"\n")
-	for N in list_of_N:
-			for scale in list_of_scale:
-	
+	#f=open("P"+str(P)+"_data.txt","a+")
+	#f.write("--------------------------------h=1/"+str(nx)+"\n")
+	for scale in list_of_scale:	
+			for N in list_of_N:	
 				# Load mesh and subdomains
 				ny = nx
 				mesh = UnitSquareMesh(nx,ny) # divides [0,1]x[0,1] into 20x20 
 				h = CellSize(mesh)
-				delta = scale*(1/nx)  # this is where we change the filtering radius
-
-
+				nxx = float(nx)		
+				delta = scale/nxx       # this is where we change the filtering radius
+				
 				# Create FunctionSpaces
 				Q = FunctionSpace(mesh, "CG", P)
 
@@ -106,14 +110,16 @@ for nx in list_of_nx:
 				bc = DirichletBC(Q, u_D, boundary)
 
 				# Output file
-				if scale == np.sqrt(2):
-					scale = 'sqrt2'
 
-				folder = "h1_"+str(nx)+"_delta"+str(scale)+"h"
-				if P==2:
-					folder = "P2+"folder
+				if scale == np.sqrt(2):
+					scalename = 'sqrt2'
+				else:
+					scalename = scale
+
+				folder ="P"+str(P)+"h1_"+str(nx)+"_delta"+str(scalename)+"h"
+
 				before = "/N"+str(N)
-				after = "_h1_"+str(nx)+"_delta"+str(scale)+"h_"
+				after = "_h1_"+str(nx)+"_delta"+str(scalename)+"h_"
 
 				out_file_u = File(folder+"/u_"+"h_"+str(nx)+".pvd")
 				out_file_usupg = File(folder+"/u_SUPG_"+"h_"+str(nx)+".pvd")
@@ -298,25 +304,29 @@ for nx in list_of_nx:
 				##   ----- Calculate L-2 and L-inf error norms using SUPG as true solution
 				# as seen in ft01_poisson.py
 
-				nofilter_Linf_err = np.abs(u_SUPG.vector().array() - u.vector().array()).max()
-				string1 = 'nofilter_Linf_err = ' + str(nofilter_Linf_err)
-				filtered_Linf_err = np.abs(u_SUPG.vector().array() - u_bar.vector().array()).max()
-				string2 = 'filtered_Linf_err = '+str(filtered_Linf_err)
-				#print ' '
 
-				nofilter_L2_err = errornorm(u_SUPG, u, 'L2')
-				string3 = 'nofilter_L2_err = ' + str(nofilter_L2_err)
-				filtered_L2_err = errornorm(u_SUPG,u_bar,'L2')
-				filtered_L2again_err = Expression('sqrt((a-b)*(a-b))', degree = 2, a = u_SUPG, b = u_bar)
-				string4 = 'filtered_L2_err = ' + str(filtered_L2_err)+'check if different to:'+str(filtered_L2again_err)
+
+				if N==0:
+					nofilter_Linf_err = np.abs(u_SUPG.vector().array() - u.vector().array()).max()
+					filtered_Linf_err = np.abs(u_SUPG.vector().array() - u_bar.vector().array()).max()
+					nofilter_L2_err = errornorm(u_SUPG, u, 'L2')
+					filtered_L2_err = errornorm(u_SUPG,u_bar,'L2')
+					firstcol = "h=1/"+str(nx)+", "+"\delta = "+str(scalename)+"h "
+					outputf = firstcol+"& "+str(nofilter_Linf_err)+" & "+str(filtered_Linf_err)
+					outputg = firstcol+"& "+str(nofilter_L2_err)+" & "+str(filtered_L2_err)
+				if N >0:				
+					filtered_Linf_err = np.abs(u_SUPG.vector().array() - u_bar.vector().array()).max()
+					filtered_L2_err = errornorm(u_SUPG,u_bar,'L2')	
+					outputf = " & "+str(filtered_Linf_err)
+					outputg = " & "+str(filtered_L2_err)
+					if N==3:
+						outputf = outputf+"  \\\\ \n"	
+						outputg = outputg+"  \\\\ \n"
+				f=open("P"+str(P)+"_infnorm.txt","a+")
+				g=open("P"+str(P)+"_2norm.txt","a+")			
+				f.write(outputf)
+				g.write(outputg)
 
 				out_file_ubar << u_bar
 
-				output = string0+"\n \n"+string1+"\n"+string2+"\n"+string3+"\n"+string4+"\n \n"
-
-				#print output
-## _____Uncomment to save error info to a textfile named data.txt
-				'''
-				f=open("P2_data.txt","a+")
-				f.write(output)
-				'''
+		
