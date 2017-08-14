@@ -28,9 +28,11 @@
 from dolfin import *
 import matplotlib.pyplot as plt
 
+nx = 20
+ny = nx
 
 # Load mesh and subdomains
-mesh = UnitSquareMesh(20,20)
+mesh = UnitSquareMesh(nx,ny)
 h = CellSize(mesh)
 
 # Create FunctionSpaces
@@ -50,14 +52,16 @@ u_D = Constant(0.0)
 T = 2.0
 dt = 0.01
 t = dt
-sigma = 1.0
-mu = 0.001
+sigma = -2.0
+mu = -0.001
+nxx = float(nx)		
+delta = 1.0/nxx 
 
 # Test and trial functions
 u, v = TrialFunction(Q), TestFunction(Q)
 
 # Mid-point solution
-u_mid = 0.5*(u0 + u)
+u_mid = 0.5*(u0 + u)    
 
 # Residual
 r = u - u0 + dt*(- mu*div(grad(u_mid)) + dot(velocity, grad(u_mid)) + sigma*u_mid - f)
@@ -106,11 +110,60 @@ while t - T < DOLFIN_EPS:
     # Solve the linear system (re-use the already factorized matrix A)
     solver.solve(u.vector(), b)
 
+    # Apply Filter
+	u_1tilde = TrialFunction(Q)
+	F_Hfilter0 = v*u_1tilde*dx + delta*delta*dot(grad(v), grad(u_1tilde))*dx - v*u*dx
+
+	a_Hfilter0 = lhs(F_Hfilter0)
+	L_Hfilter0 = rhs(F_Hfilter0)
+
+	A_Hfilter0 = assemble(a_Hfilter0)
+	bc.apply(A_Hfilter0)
+
+	b_Hfilter0 = assemble(L_Hfilter0)
+	bc.apply(b_Hfilter0)
+
+	solver0 = LUSolver(A_Hfilter0)
+	u_1tilde = Function(Q)
+	solver0.solve(u_1tilde.vector(), b_Hfilter0)
+	DF = u_1tilde
+	#out_file_utilde << u_1tilde
+
+	indicator = Expression('sqrt((a-b)*(a-b))', degree = 2, a = u, b = DF)
+	indicator = interpolate(indicator, Q)
+	max_ind = np.amax(indicator.vector().array())
+
+	# Normalize indicator such that it's between [0,1].
+	if max_ind < 1:
+	   max_ind = 1.0
+
+	indicator = Expression('a/b', degree = 2, a = indicator, b = max_ind)
+	indicator = interpolate(indicator, Q)
+
+	out_file_ind << indicator
+
+	# Apply the filter
+	u_bar = TrialFunction(Q)
+	F_filter = v*u_bar*dx + delta*delta*dot(grad(v), indicator*grad(u_bar))*dx - v*u*dx 
+
+	a_filter = lhs(F_filter)
+	L_filter = rhs(F_filter)
+
+	A_filter = assemble(a_filter)
+	bc.apply(A_filter)
+
+	b_filter = assemble(L_filter)
+	bc.apply(b_filter)
+
+	solver = LUSolver(A_filter)
+	u_bar = Function(Q)
+	solver.solve(u_bar.vector(), b_filter)
+
     # Copy solution from previous interval
-    u0 = u
+    u0 = u_bar
 
     # Save the solution to file
-    out_file << (u, t)
+    out_file << (u_bar, t)
 
     # Move to next interval and adjust boundary condition
     t += dt
