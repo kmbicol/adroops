@@ -27,6 +27,7 @@
 
 from dolfin import *
 import matplotlib.pyplot as plt
+import numpy as np
 
 nx = 20
 ny = nx
@@ -49,18 +50,18 @@ u0 = Function(Q)
 u_D = Constant(0.0)
 
 # Parameters
-T = 2.0
+T = 0.05
 dt = 0.01
 t = dt
-sigma = -2.0
-mu = -0.001
+sigma = 0.01
+mu = 0.001
 nxx = float(nx)		
 delta = 1.0/nxx 
 
 # Test and trial functions
 u, v = TrialFunction(Q), TestFunction(Q)
 
-# Mid-point solution
+# Mid-point solution (Crank-Nicolson)
 u_mid = 0.5*(u0 + u)    
 
 # Residual
@@ -95,31 +96,33 @@ solver.parameters["reuse_factorization"] = True
 
 # Output file
 out_file = File("results_time_dep/u.pvd")
-
+out_file_ind = File("results_time_dep/a.pvd")
 # Set intial condition
 u = u0
 
 # Time-stepping, plot initial condition.
 i = 0
 
+
+
+
+
 while t - T < DOLFIN_EPS:
-    # Assemble vector and apply boundary conditions
-    b = assemble(L)
-    bc.apply(b)
+	# Assemble vector and apply boundary conditions
+	b = assemble(L)
+	bc.apply(b)
 
-    # Solve the linear system (re-use the already factorized matrix A)
-    solver.solve(u.vector(), b)
+	# Solve the linear system (re-use the already factorized matrix A)
+	solver.solve(u.vector(), b)
+	'''
 
-    # Apply Filter
 	u_1tilde = TrialFunction(Q)
 	F_Hfilter0 = v*u_1tilde*dx + delta*delta*dot(grad(v), grad(u_1tilde))*dx - v*u*dx
-
 	a_Hfilter0 = lhs(F_Hfilter0)
 	L_Hfilter0 = rhs(F_Hfilter0)
 
 	A_Hfilter0 = assemble(a_Hfilter0)
 	bc.apply(A_Hfilter0)
-
 	b_Hfilter0 = assemble(L_Hfilter0)
 	bc.apply(b_Hfilter0)
 
@@ -135,7 +138,7 @@ while t - T < DOLFIN_EPS:
 
 	# Normalize indicator such that it's between [0,1].
 	if max_ind < 1:
-	   max_ind = 1.0
+	max_ind = 1.0
 
 	indicator = Expression('a/b', degree = 2, a = indicator, b = max_ind)
 	indicator = interpolate(indicator, Q)
@@ -155,16 +158,16 @@ while t - T < DOLFIN_EPS:
 	b_filter = assemble(L_filter)
 	bc.apply(b_filter)
 
-	solver = LUSolver(A_filter)
+	solver_filter = LUSolver(A_filter)
 	u_bar = Function(Q)
-	solver.solve(u_bar.vector(), b_filter)
+	solver_filter.solve(u_bar.vector(), b_filter)
 
-    # Copy solution from previous interval
-    u0 = u_bar
+	# Copy solution from previous interval
+	u0 = 0.5*u + 0.5*u_bar
+	'''
+	# Save the solution to file
+	out_file << (u, t)
 
-    # Save the solution to file
-    out_file << (u_bar, t)
-
-    # Move to next interval and adjust boundary condition
-    t += dt
-    i += 1
+	# Move to next interval and adjust boundary condition
+	t += dt
+	i += 1
