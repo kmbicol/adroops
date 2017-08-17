@@ -28,17 +28,14 @@
 from dolfin import *
 from fenics import *
 import numpy as np
-import math
 
 # Automated multiple solutions
-list_of_nx = [20, 40, 80]
+list_of_nx = [20, 40, 80, 200]
 list_of_N = [0,1,2,3]    # choices: 0,1,2,3
-list_of_scale = [1 , np.sqrt(2), 2] # choices: 1, np.sqrt(2), 2
-P = 1 # choices: 1 (means P1) , 2 (means P2)
+list_of_scale = [1.0 , np.sqrt(2), 2.0] # choices: 1, np.sqrt(2), 2
+P = 2 # choices: 1 (means P1) , 2 (means P2)
 
 '''
-
-
 # One simulation at a time
 list_of_nx = [50]
 list_of_N = [3]    # choices: 0,1,2,3
@@ -183,7 +180,7 @@ for nx in list_of_nx:
 				##################################################################################
 
 				# Helmholtz filter to compute the indicator function
-				u_tilde = TrialFunction(Q)
+				
 				u_1tilde = TrialFunction(Q)
 				u_2tilde = TrialFunction(Q)
 				u_3tilde = TrialFunction(Q)
@@ -305,15 +302,15 @@ for nx in list_of_nx:
 				# as seen in ft01_poisson.py
 
 				if scalename == 'sqrt2':
-					scalename = '\sqrt{2}'
+					scalename1 = '\sqrt{2}'
 				if scalename == 1:
-					scalename = ' '
+					scalename1 = ' '
 				if N==0:
 					nofilter_Linf_err = np.abs(u_SUPG.vector().array() - u.vector().array()).max()
 					filtered_Linf_err = np.abs(u_SUPG.vector().array() - u_bar.vector().array()).max()
 					nofilter_L2_err = errornorm(u_SUPG, u, 'L2')
 					filtered_L2_err = errornorm(u_SUPG,u_bar,'L2')
-					firstcol = "$h=1/"+str(nx)+"$, "+"$\delta = "+str(scalename)+"h $"
+					firstcol = "$h=1/"+str(nx)+"$, "+"$\delta = "+str(scalename1)+"h $"
 					outputf = firstcol+"& "+str(round(nofilter_Linf_err,4))+" & "+str(round(filtered_Linf_err,4))
 					outputg = firstcol+"& "+str(round(nofilter_L2_err,4))+" & "+str(round(filtered_L2_err,4))
 				if N >0:				
