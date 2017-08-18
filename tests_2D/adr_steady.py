@@ -30,10 +30,10 @@ from fenics import *
 import numpy as np
 
 # Automated multiple solutions
-list_of_nx = [20, 40, 80, 200]
+list_of_nx = [20]#, 40, 80, 200]
 list_of_N = [0,1,2,3]    # choices: 0,1,2,3
-list_of_scale = [1.0 , np.sqrt(2), 2.0] # choices: 1, np.sqrt(2), 2
-P = 2 # choices: 1 (means P1) , 2 (means P2)
+list_of_scale = [1, np.sqrt(2), 2] # choices: 1, np.sqrt(2), 2
+P=input('P = ')#1 # choices: 1 (means P1) , 2 (means P2)
 
 '''
 # One simulation at a time
@@ -108,10 +108,10 @@ for nx in list_of_nx:
 
 				# Output file
 
-				if scale == np.sqrt(2):
-					scalename = 'sqrt2'
-				else:
+				if scale == 1 or scale==2:
 					scalename = scale
+				else:
+					scalename = 'sqrt2'
 
 				folder ="P"+str(P)+"h1_"+str(nx)+"_delta"+str(scalename)+"h"
 
@@ -301,16 +301,16 @@ for nx in list_of_nx:
 				##   ----- Calculate L-2 and L-inf error norms using SUPG as true solution
 				# as seen in ft01_poisson.py
 
-				if scalename == 'sqrt2':
-					scalename1 = '\sqrt{2}'
-				if scalename == 1:
-					scalename1 = ' '
+				#if scalename == 'sqrt2':
+				#	scalename1 = '\sqrt{2}'
+				#if scalename == 1:
+				#	scalename1 = ' '
 				if N==0:
 					nofilter_Linf_err = np.abs(u_SUPG.vector().array() - u.vector().array()).max()
 					filtered_Linf_err = np.abs(u_SUPG.vector().array() - u_bar.vector().array()).max()
 					nofilter_L2_err = errornorm(u_SUPG, u, 'L2')
 					filtered_L2_err = errornorm(u_SUPG,u_bar,'L2')
-					firstcol = "$h=1/"+str(nx)+"$, "+"$\delta = "+str(scalename1)+"h $"
+					firstcol = "$h=1/"+str(nx)+"$, "+"$\delta = "+str(scalename)+"h $"
 					outputf = firstcol+"& "+str(round(nofilter_Linf_err,4))+" & "+str(round(filtered_Linf_err,4))
 					outputg = firstcol+"& "+str(round(nofilter_L2_err,4))+" & "+str(round(filtered_L2_err,4))
 				if N >0:				
