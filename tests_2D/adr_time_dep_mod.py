@@ -5,7 +5,7 @@ import numpy as np
 
 T = 1.0             # final time
 #dt = 0.01         # time step size
-num_steps = 10
+num_steps = 100
 dt = T / num_steps # time step size
 
 sigma = 1.0       # reaction coefficient
@@ -55,6 +55,7 @@ def a(u_tilde, u_):
     indicator = Expression('sqrt((a-b)*(a-b))', degree = 2, a = u_, b = u_tilde)
     indicator = interpolate(indicator, Q)
     return indicator
+ind = 0.0 #initializing ind
 
 # Define variational problem for step 1 (solve on coarse grid)
 F1 = v*(u - u_n)*dx + dt*(mu*dot(grad(v), grad(u_mid))*dx \
@@ -69,18 +70,20 @@ a2 = v*u*dx + delta*delta*dot(grad(v), grad(u))*dx #lhs(F_Hfilter)
 L2 = v*u_*dx #rhs(F_Hfilter)
 
 # Define variational problem for step 2b (evaluate indicator and find filtered solution)
-a3 = v*u*dx + delta*delta*dot(grad(v), a(u_tilde, u_)*grad(u))*dx
+def a3(ind):
+	a3 = v*u*dx + delta*delta*dot(grad(v), ind*grad(u))*dx
+	return a3
 L3 = v*u_*dx
 
 # Assemble matrices
 A1 = assemble(a1)
 A2 = assemble(a2)
-A3 = assemble(a3)
+
 
 # Apply boundary conditions to matrices
 bc.apply(A1)
 bc.apply(A2)
-bc.apply(A3)
+
 
 # Create VTK files for visualization output
 folder = "results_time_dep/"
@@ -111,6 +114,9 @@ for n in range(num_steps):
     solve(A2, u_tilde.vector(), b2)
 
     # Step 2b
+    ind = a(u_tilde, u_)
+    A3 = assemble(a3(ind))
+    bc.apply(A3)
     b3 = assemble(L3)
     bc.apply(b3)
     solve(A3, u_bar.vector(), b3)    
