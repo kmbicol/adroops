@@ -1,12 +1,14 @@
 from __future__ import print_function
+from dolfin import *
 from fenics import *
 from mshr import *
+from copy import deepcopy
 import numpy as np
 
-T = 1.0             # final time
-#dt = 0.01         # time step size
-num_steps = 100
-dt = T / num_steps # time step size
+T = 1.0 # final time
+dt = 0.01 # time step size
+tt = 0.01
+num_steps = int(round(T / tt, 0))           
 
 sigma = 1.0       # reaction coefficient
 mu = 0.001        # diffision coefficient
@@ -43,7 +45,7 @@ u_bar = Function(Q)
 # Define expressions used in variational forms
 t = 0
 f_n = Expression('3+sigma*(t+x[0]+x[1])', degree = 1, sigma = sigma, t = t) 
-f = Expression('3+sigma*(t+x[0]+x[1])', degree = 1, sigma = sigma, t = t+dt)
+f = Expression('3+sigma*(t+x[0]+x[1])', degree = 1, sigma = sigma, t = t+tt)
 
 f_mid = 0.5*(f_n + f)
 u_mid  = 0.5*(u_n + u)
@@ -93,15 +95,11 @@ out_file_ind = File(folder+"a.pvd")          # indicator function
 out_file_ubar = File(folder+"ubar.pvd")      # filtered solution
 u_series = TimeSeries('velocity')
 
-# Create progress bar
-progress = Progress('Time-stepping')
-set_log_level(PROGRESS)
-
 # Time-stepping
 t = 0.0
 for n in range(num_steps):
     # Update current time
-    t += dt
+    t += tt
 
     # Step 1
     b1 = assemble(L1)
@@ -127,10 +125,8 @@ for n in range(num_steps):
     #out_file_ind << a(u_tilde, u_)
     out_file_ubar << (u_bar, float(t))
 
-    # Update previous solution
+    # Update previous solution and source term
     u_n.assign(u_bar)
-    f_n = f
-
-
-    # Update progress bar
-    progress.update(t / T)
+    f_n = Expression(f.cppcode, degree = 1, sigma = sigma, t = t)
+    f.t += tt
+    f_n.t += tt
