@@ -1,20 +1,44 @@
 from __future__ import print_function
 from dolfin import *
 from fenics import *
-from mshr import *
 from copy import deepcopy
 import numpy as np
 
-T = 1.0 # final time
-dt = 0.01 # time step size
-tt = 0.01
-num_steps = int(round(T / tt, 0))           
 
-sigma = 1.0       # reaction coefficient
-mu = 0.001        # diffision coefficient
-delta = 1.0/50.0  # filtering radius
+code = 'Test'
 
-velocity = as_vector([1.0, 1.0]) # convection velocity
+if code == 'Test':
+
+	# My test problem
+
+	T = 1.0 # final time
+	dt = 0.01 # time step size
+	tt = 0.01
+	num_steps = int(round(T / tt, 0))           
+
+	sigma = 1.0       # reaction coefficient
+	mu = 0.001        # diffision coefficient
+	delta = 1.0/50.0  # filtering radius
+
+	velocity = as_vector([1.0, 1.0]) # convection velocity
+
+
+if code == 'Iliescu':
+
+	# Iliescu Ex 4.1
+
+	T = 2.0 # final time
+	dt = 0.01 # time step size
+	tt = 0.01
+	num_steps = int(round(T / tt, 0))           
+
+	sigma = 1.0       # reaction coefficient
+	mu = 0.000001        # diffusion coefficient
+	delta = 1.0/20.0  # filtering radius
+
+	velocity = as_vector([2.0, 3.0]) # convection velocity
+
+###########################################################
 
 # Create mesh
 mesh = UnitSquareMesh(20,20)
@@ -44,8 +68,18 @@ u_bar = Function(Q)
 
 # Define expressions used in variational forms
 t = 0
-f_n = Expression('3+sigma*(t+x[0]+x[1])', degree = 1, sigma = sigma, t = t) 
-f = Expression('3+sigma*(t+x[0]+x[1])', degree = 1, sigma = sigma, t = t+tt)
+
+if code == 'Test':
+	adr_f = Expression('3+sigma*(t+x[0]+x[1])', degree = 1, sigma = sigma, mu=mu, t = t)
+if code == 'Iliescu':
+	diff_u = Expression('-32*(1 - x[0])*x[0] *sin(pi*t) ((atan((2*(-(x[0] - 0.5)^2 - (x[1] - 0.5)^2 + 0.0625))/mu^0.5))/pi + 1/2) - 32*(1 - x[1])*x[1]*sin(pi*t) ((atan((2*(-(x[0] - 0.5)^2 - (x[1] - 0.5)^2 + 0.0625))/mu^0.5))/pi + 1/2) - (1024*(1 - x[0])*x[0]*(x[0] - 0.5)^2*(1 - x[1])*x[1]*sin(pi*t) (-(x[0] - 0.5)^2 - (x[1] - 0.5)^2 + 0.0625))/(pi*mu^1.5 ((4*(-(x[0] - 0.5)^2 - (x[1] - 0.5)^2 + 0.0625)^2)/mu^1. + 1)^2) - (1024*(1 - x[0])*x[0]*(1 - x[1]) (x[1] - 0.5)^2 x[1] *sin(pi*t) (-(x[0] - 0.5)^2 - (x[1] - 0.5)^2 + 0.0625))/(pi*mu^1.5 ((4*(-(x[0] - 0.5)^2 - (x[1] - 0.5)^2 + 0.0625)^2)/mu^1. + 1)^2) - (128 (1 - x[0]) (x[0] - 0.5) (1 - x[1])*x[1]*sin(pi*t))/(pi*mu^0.5 ((4*(-(x[0] - 0.5)^2 - (x[1] - 0.5)^2 + 0.0625)^2)/mu^1. + 1)) + (128*x[0]*(x[0] - 0.5) (1 - x[1])*x[1]*sin(pi*t))/(pi*mu^0.5 ((4*(-(x[0] - 0.5)^2 - (x[1] - 0.5)^2 + 0.0625)^2)/mu^1. + 1)) - (128 (1 - x[0])*x[0]*(1 - x[1]) (x[1] - 0.5) *sin(pi*t))/(pi*mu^0.5 ((4*(-(x[0] - 0.5)^2 - (x[1] - 0.5)^2 + 0.0625)^2)/mu^1. + 1)) - (128 (1 - x[0])*x[0]*(1 - x[1])*x[1]*sin(pi*t))/(pi*mu^0.5 ((4*(-(x[0] - 0.5)^2 - (x[1] - 0.5)^2 + 0.0625)^2)/mu^1. + 1)) + (128 (1 - x[0])*x[0]*(x[1] - 0.5)*x[1] *sin(pi*t))/(pi*mu^0.5 ((4*(-(x[0] - 0.5)^2 - (x[1] - 0.5)^2 + 0.0625)^2)/mu^1. + 1))', degree = 1, sigma = sigma, mu=mu, t = t)
+	conv_u = Expression('3*(16*(1 - x[0])*x[0]*(1 - x[1]) *sin(pi*t) ((atan((2*(-(x[0] - 0.5)^2 - (x[1] - 0.5)^2 + 0.0625))/mu^0.5))/pi + 1/2) - 16*(1 - x[0])*x[0]*x[1] *sin(pi*t) ((atan((2*(-(x[0] - 0.5)^2 - (x[1] - 0.5)^2 + 0.0625))/mu^0.5))/pi + 1/2) - (64*(1 - x[0])*x[0]*(1 - x[1]) (x[1] - 0.5)*x[1] *sin(pi*t))/(pi*mu^0.5 ((4*(-(x[0] - 0.5)^2 - (x[1] - 0.5)^2 + 0.0625)^2)/mu^1. + 1))) + 2*(16*(1 - x[0]) (1 - x[1])*x[1]*sin(pi*t) ((atan((2*(-(x[0] - 0.5)^2 - (x[1] - 0.5)^2 + 0.0625))/mu^0.5))/pi + 1/2) - 16*x[0]*(1 - x[1])*x[1]*sin(pi*t) ((atan((2*(-(x[0] - 0.5)^2 - (x[1] - 0.5)^2 + 0.0625))/mu^0.5))/pi + 1/2) - (64*(1 - x[0]) (x[0] - 0.5)*x[0]*(1 - x[1])*x[1]*sin(pi*t))/(pi*mu^0.5 ((4*(-(x[0] - 0.5)^2 - (x[1] - 0.5)^2 + 0.0625)^2)/mu^1. + 1)))', degree = 1, sigma = sigma, mu=mu, t = t)
+	rxn_u =Expression('16*sin(pi*t)*x[0]*(1-x[0])*x[1]*(1-x[1])*(1/2+arctan(2*mu^(-.5)*(0.25^2-(x[0]-0.5)^2-(x[1]-0.5)^2))/pi', degree = 1, sigma = sigma, mu=mu, t = t)
+	adr_f = conv_u + diff_u + rxn_u
+
+
+f_n = Expression(adr_f.cppcode, degree = 1, sigma = sigma, mu=mu, t = t) 
+f = Expression(adr_f.cppcode, degree = 1, sigma = sigma, mu=mu, t = t+tt)
 
 f_mid = 0.5*(f_n + f)
 u_mid  = 0.5*(u_n + u)
@@ -95,8 +129,11 @@ out_file_ind = File(folder+"a.pvd")          # indicator function
 out_file_ubar = File(folder+"ubar.pvd")      # filtered solution
 u_series = TimeSeries('velocity')
 
+# Create progress bar
+progress = Progress('Time-stepping')
+set_log_level(PROGRESS)
+
 # Time-stepping
-t = 0.0
 for n in range(num_steps):
     # Update current time
     t += tt
@@ -130,3 +167,6 @@ for n in range(num_steps):
     f_n = Expression(f.cppcode, degree = 1, sigma = sigma, t = t)
     f.t += tt
     f_n.t += tt
+
+    # Update progress bar
+    progress.update(t / T)
