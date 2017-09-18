@@ -7,6 +7,7 @@ import numpy as np
 
 code = 'Test'
 
+# Parameters
 if code == 'Test':
 
 	# My test problem
@@ -90,8 +91,15 @@ mu = Constant(mu)
 def a(u_tilde, u_):
     indicator = Expression('sqrt((a-b)*(a-b))', degree = 2, a = u_, b = u_tilde)
     indicator = interpolate(indicator, Q)
+    max_ind = np.amax(indicator.vector().array())
+
+    # Normalize indicator such that it's between [0,1].
+    if max_ind < 1:
+       max_ind = 1.0
+
+    indicator = Expression('a/b', degree = 2, a = indicator, b = max_ind)
+    indicator = interpolate(indicator, Q) 
     return indicator
-ind = 0.0 #initializing ind
 
 # Define variational problem for step 1 (solve on coarse grid)
 F1 = v*(u - u_n)*dx + dt*(mu*dot(grad(v), grad(u_mid))*dx \
@@ -159,7 +167,7 @@ for n in range(num_steps):
     # Save solution to file (VTK)
     out_file << (u_, float(t))
     out_file_utilde << (u_tilde, float(t))
-    #out_file_ind << a(u_tilde, u_)
+    out_file_ind << (ind, float(t))
     out_file_ubar << (u_bar, float(t))
 
     # Update previous solution and source term
