@@ -18,6 +18,8 @@ for nx in list_of_nx:
 				# Load mesh and subdomains
 '''
 
+SU = 0
+
 ## Single Solution Code
 # Simulation Parameters
 dt = 0.01
@@ -45,6 +47,8 @@ ny = nx
 mesh = UnitSquareMesh(nx,ny) # divides [0,1]x[0,1] into 20x20 
 h = CellSize(mesh)
 
+
+
 # Define function spaces
 Q = FunctionSpace(mesh, "CG", P)
 
@@ -65,6 +69,7 @@ u_n = Function(Q)
 u_  = Function(Q)
 u_tilde = Function(Q)
 u_bar = Function(Q)
+
 
 ## Define expressions used in variational forms
 
@@ -163,8 +168,10 @@ out_file_ugls = File(folder+"/u_GLS_"+"h_"+str(nx)+".pvd")
 out_file_udw = File(folder+"/u_DW_"+"h_"+str(nx)+".pvd")
 
 out_file_utilde = File(folder+"/u_tilde.pvd")
-out_file_ubar = File(folder+before+after+"u_bar.pvd")
-out_file_ind = File(folder+before+after+"a.pvd")
+out_file_ind1 = File(folder+before+after+"a0.pvd")
+out_file_ind2 = File(folder+before+after+"a1.pvd")
+out_file_ind3 = File(folder+before+after+"a2.pvd")
+out_file_ind4 = File(folder+before+after+"a3.pvd")
 
 string0 = 'N = '+str(N)+' and h = 1/'+str(nx)
 
@@ -179,8 +186,7 @@ out_file_ugls << u_GLS
 out_file_udw << u_DW
 
 ##################################################################################
-N = 3
-
+N = 0
 # Helmholtz filter to compute the indicator function
 
 u_1tilde = TrialFunction(Q)
@@ -236,6 +242,8 @@ out_file_u1tilde << u_1tilde
 
 ind1 = a(u_tilde, DF)
 out_file_ind1 << ind1
+if N == 0:
+	ind = ind1
 
 ## ______________________________________________________________________ N=1
 if N>0:
@@ -256,7 +264,9 @@ if N>0:
 	DF = Expression('a+b-c',degree=2,a=DF,b=u_1tilde,c=u_2tilde)
 	out_file_u2tilde << u_2tilde
 	ind2 = a(u_tilde, DF)
-	out_file_ind << ind2
+	out_file_ind2 << ind2
+	if N==1:
+		ind = ind2
 
 
 ## ______________________________________________________________________ N=2
@@ -277,6 +287,10 @@ if N>0:
 		solver2.solve(u_3tilde.vector(), b_Hfilter2)
 		DF = Expression('a+b-2*c+d',degree=2,a=DF,b=u_1tilde,c=u_2tilde,d=u_3tilde)
 		out_file_u3tilde << u_3tilde
+		ind3 = a(u_tilde, DF)
+		out_file_ind3 << ind3
+		if N==2:
+			ind = ind3
 
 ## ______________________________________________________________________ N=3
 		if N>2:
@@ -296,14 +310,24 @@ if N>0:
 			solver3.solve(u_4tilde.vector(), b_Hfilter3)
 			DF = Expression('a+b-3*c+3*d-e',degree=2,a=DF,b=u_1tilde,c=u_2tilde,d=u_3tilde,e=u_4tilde)
 			out_file_u4tilde << u_4tilde
+			ind4 = a(u_tilde, DF)
+			out_file_ind4 << ind4
+			if N == 3:
+				ind = ind4
 
 
 
 
 
 # Apply the filter
+
 u_bar = TrialFunction(Q)
-F_filter = v*u_bar*dx + delta*delta*dot(grad(v), ind*grad(u_bar))*dx - v*u*dx 
+if SU == 1:
+	F_filter = v*u_bar*dx + delta*delta*dot(dot(velocity,grad(v)), ind*dot(velocity, grad(u_bar)))*dx - v*u*dx 
+	out_file_ubar = File(folder+before+after+"u_bar_SU.pvd")
+else:
+	F_filter = v*u_bar*dx + delta*delta*dot(grad(v), ind*grad(u_bar))*dx - v*u*dx 
+	out_file_ubar = File(folder+before+after+"u_bar.pvd")
 
 a_filter = lhs(F_filter)
 L_filter = rhs(F_filter)
