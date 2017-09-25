@@ -18,7 +18,7 @@ for nx in list_of_nx:
 				# Load mesh and subdomains
 '''
 
-SU = 0
+
 
 ## Single Solution Code
 # Simulation Parameters
@@ -34,8 +34,6 @@ N = 3
 # Problem Parameters
 sigma = 0.01
 mu = 0.001
-
-velocity = as_vector([1.0, 1.0]) # this is b
 
 # Initialize source function and previous solution function
 f  = Constant(1.0)
@@ -68,7 +66,17 @@ u_  = Function(Q)
 u_tilde = Function(Q)
 u_bar = Function(Q)
 
-#velocity = Expression(('x[0]', 'x[1]'), degree=1)
+velocity = Expression(('-(x[1]-.5)', 'x[0]-.5'), degree=1)
+
+'''
+## Transport Velocity Options
+as_vector([1.0, 1.0])			# constant
+('x[0]','x[1]') 				# increasing in (1,1) direction
+('x[0]-0.5', 'x[1]-0.5') 		# increasing out of center of unit square
+('x[0]-0.5', '-(x[1]-0.5)')     # increasing with areas of 0 velocity
+('x[1]-.5', '-(x[0]-.5)') 		# clockwise rotation
+('-(x[1]-.5)', 'x[0]-.5')  		# counterclockwise rotation
+'''
 
 ## Define expressions used in variational forms
 
@@ -319,52 +327,51 @@ for N in range(3):
 
 
 
+	for SU in [0, 1]:
 
+		# Apply the filter
+		u_bar = TrialFunction(Q)
+		if SU == 1:
+			F_filter = v*u_bar*dx + delta*delta*dot(dot(velocity,grad(v)), ind*dot(velocity, grad(u_bar)))*dx - v*u*dx 
+			out_file_ubar = File(folder+before+after+"u_bar_SU.pvd")
+		else:
+			F_filter = v*u_bar*dx + delta*delta*dot(grad(v), ind*grad(u_bar))*dx - v*u*dx 
+			out_file_ubar = File(folder+before+after+"u_bar.pvd")
 
-	# Apply the filter
+		a_filter = lhs(F_filter)
+		L_filter = rhs(F_filter)
 
-	u_bar = TrialFunction(Q)
-	if SU == 1:
-		F_filter = v*u_bar*dx + delta*delta*dot(dot(velocity,grad(v)), ind*dot(velocity, grad(u_bar)))*dx - v*u*dx 
-		out_file_ubar = File(folder+before+after+"u_bar_SU.pvd")
-	else:
-		F_filter = v*u_bar*dx + delta*delta*dot(grad(v), ind*grad(u_bar))*dx - v*u*dx 
-		out_file_ubar = File(folder+before+after+"u_bar.pvd")
+		A_filter = assemble(a_filter)
+		bc.apply(A_filter)
 
-	a_filter = lhs(F_filter)
-	L_filter = rhs(F_filter)
+		b_filter = assemble(L_filter)
+		bc.apply(b_filter)
 
-	A_filter = assemble(a_filter)
-	bc.apply(A_filter)
+		solver = LUSolver(A_filter)
+		u_bar = Function(Q)
+		solver.solve(u_bar.vector(), b_filter)
+		'''
+		# Save Output Files
+		if N==0:
+			nofilter_Linf_err = np.abs(u_SUPG.vector().array() - u.vector().array()).max()
+			filtered_Linf_err = np.abs(u_SUPG.vector().array() - u_bar.vector().array()).max()
+			nofilter_L2_err = errornorm(u_SUPG, u, 'L2')
+			filtered_L2_err = errornorm(u_SUPG,u_bar,'L2')
+			firstcol = "$h=1/"+str(nx)+"$, "+"$\delta = "+str(scalename)+"h $"
+			outputf = firstcol+"& "+str(round(nofilter_Linf_err,4))+" & "+str(round(filtered_Linf_err,4))
+			outputg = firstcol+"& "+str(round(nofilter_L2_err,4))+" & "+str(round(filtered_L2_err,4))
+		if N >0:				
+			filtered_Linf_err = np.abs(u_SUPG.vector().array() - u_bar.vector().array()).max()
+			filtered_L2_err = errornorm(u_SUPG,u_bar,'L2')	
+			outputf = " & "+str(round(filtered_Linf_err,4))
+			outputg = " & "+str(round(filtered_L2_err,4))
+			if N==3:
+				outputf = outputf+"  \\\\ \n \\hline \n"	
+				outputg = outputg+"  \\\\ \n \\hline \n"
+		f=open("P"+str(P)+"_infnorm.txt","a+")
+		g=open("P"+str(P)+"_2norm.txt","a+")			
+		f.write(outputf)
+		g.write(outputg)
+		'''
 
-	b_filter = assemble(L_filter)
-	bc.apply(b_filter)
-
-	solver = LUSolver(A_filter)
-	u_bar = Function(Q)
-	solver.solve(u_bar.vector(), b_filter)
-	'''
-	# Save Output Files
-	if N==0:
-		nofilter_Linf_err = np.abs(u_SUPG.vector().array() - u.vector().array()).max()
-		filtered_Linf_err = np.abs(u_SUPG.vector().array() - u_bar.vector().array()).max()
-		nofilter_L2_err = errornorm(u_SUPG, u, 'L2')
-		filtered_L2_err = errornorm(u_SUPG,u_bar,'L2')
-		firstcol = "$h=1/"+str(nx)+"$, "+"$\delta = "+str(scalename)+"h $"
-		outputf = firstcol+"& "+str(round(nofilter_Linf_err,4))+" & "+str(round(filtered_Linf_err,4))
-		outputg = firstcol+"& "+str(round(nofilter_L2_err,4))+" & "+str(round(filtered_L2_err,4))
-	if N >0:				
-		filtered_Linf_err = np.abs(u_SUPG.vector().array() - u_bar.vector().array()).max()
-		filtered_L2_err = errornorm(u_SUPG,u_bar,'L2')	
-		outputf = " & "+str(round(filtered_Linf_err,4))
-		outputg = " & "+str(round(filtered_L2_err,4))
-		if N==3:
-			outputf = outputf+"  \\\\ \n \\hline \n"	
-			outputg = outputg+"  \\\\ \n \\hline \n"
-	f=open("P"+str(P)+"_infnorm.txt","a+")
-	g=open("P"+str(P)+"_2norm.txt","a+")			
-	f.write(outputf)
-	g.write(outputg)
-	'''
-
-	out_file_ubar << u_bar
+		out_file_ubar << u_bar
