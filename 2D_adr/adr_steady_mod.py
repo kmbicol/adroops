@@ -1,7 +1,7 @@
 from dolfin import *
 from fenics import *
 import numpy as np
-
+import sympy as sym
 # Parameters
 
 '''
@@ -27,18 +27,24 @@ nx = 50
 P = 1
 
 # Filter Parameters
-scale = 2.0
+scale = 1.0
 delta = scale/nx
-N = 3
+# N = [0, 1, 2, 3]
 
 # Problem Parameters
 sigma = 0.01
 mu = 0.001
 
 # Initialize source function and previous solution function
-f  = Constant(1.0)
+#f  = Constant(1.0)
 
-###########################################################
+## File Output Details
+
+scalename = 1
+folder ="P"+str(P)+"h1_"+str(nx)+"_delta"+str(scalename)+"h"
+
+
+##################################################################################
 
 # Create mesh
 ny = nx
@@ -66,7 +72,7 @@ u_  = Function(Q)
 u_tilde = Function(Q)
 u_bar = Function(Q)
 
-velocity = Expression(('-(x[1]-.5)', 'x[0]-.5'), degree=1)
+##################################################################################
 
 '''
 ## Transport Velocity Options
@@ -77,6 +83,42 @@ as_vector([1.0, 1.0])			# constant
 ('x[1]-.5', '-(x[0]-.5)') 		# clockwise rotation
 ('-(x[1]-.5)', 'x[0]-.5')  		# counterclockwise rotation
 '''
+
+velocity = as_vector([1.0, 1.0])
+#velocity = Expression(('-(x[1]-.5)', 'x[0]-.5'), degree=1)
+
+a = velocity[0]
+b = velocity[1]
+
+##################################################################################
+'''
+## Source Function Options
+x*x + y*y + t
+x + y
+x + y + t
+'''
+
+
+x, y = sym.symbols('x[0], x[1]')
+
+u_exact = x*x+y*y
+u_exact = sym.simplify(u_exact)
+
+fpy = -mu*sym.diff(sym.diff(u_exact, x), x) + sym.diff(sym.diff(u_exact, y), y) + a*sym.diff(u_exact, x) + b*sym.diff(u_exact, y) + sigma*u_exact
+fpy = sym.simplify(fpy)
+
+u_code = sym.printing.ccode(u_exact)
+f_code = sym.printing.ccode(fpy)
+
+print('u =', u_code)
+print('f =', f_code)
+
+f = Expression(f_code, degree=2)
+'''
+f  = Constant(1.0)
+'''
+##################################################################################
+
 
 ## Define expressions used in variational forms
 
@@ -156,6 +198,16 @@ solver.solve(u_DW.vector(), b_DW)
 ##################################################################################
 
 # File Output
+out_file_u = File(folder+"/u_nofilter"+"h_"+str(nx)+".pvd")
+out_file_usupg = File(folder+"/u_SUPG_"+"h_"+str(nx)+".pvd")
+out_file_ugls = File(folder+"/u_GLS_"+"h_"+str(nx)+".pvd")
+out_file_udw = File(folder+"/u_DW_"+"h_"+str(nx)+".pvd")
+
+out_file_u << u
+out_file_usupg << u_SUPG
+out_file_ugls << u_GLS
+out_file_udw << u_DW
+
 
 h=open("P"+str(P)+"_infnorm.txt","a+")
 g=open("P"+str(P)+"_2norm.txt","a+")
@@ -163,19 +215,28 @@ g=open("P"+str(P)+"_2norm.txt","a+")
 h.write("L inf-norm & No Filter & $N=0$ & $N=1$ & $N=2$ & $N=3$ \\\\ \n \\hline \n")
 g.write("L 2-norm & No Filter & $N=0$ & $N=1$ & $N=2$ & $N=3$ \\\\ \n \\hline \n")
 
+##################################################################################
 
-for N in range(3):
+## EFR Algorithm
 
-	scalename = 2
-	folder ="P"+str(P)+"h1_"+str(nx)+"_delta"+str(scalename)+"h"
+def a(u_, DF):
+	# Compute the indicator function
+	indicator = Expression('sqrt((a-b)*(a-b))', degree = 2, a = u_, b = DF)
+	indicator = interpolate(indicator, Q)
+	max_ind = np.amax(indicator.vector().array())
+
+	# Normalize indicator such that it's between [0,1].
+	if max_ind < 1:
+	   max_ind = 1.0
+
+	indicator = Expression('a/b', degree = 2, a = indicator, b = max_ind)
+	indicator = interpolate(indicator, Q)
+	return indicator
+
+for N in range(4):
 
 	before = "/N"+str(N)
 	after = "_h1_"+str(nx)+"_delta"+str(scalename)+"h_"
-
-	out_file_u = File(folder+"/u_nofilter"+"h_"+str(nx)+".pvd")
-	out_file_usupg = File(folder+"/u_SUPG_"+"h_"+str(nx)+".pvd")
-	out_file_ugls = File(folder+"/u_GLS_"+"h_"+str(nx)+".pvd")
-	out_file_udw = File(folder+"/u_DW_"+"h_"+str(nx)+".pvd")
 
 	out_file_utilde = File(folder+"/u_tilde.pvd")
 	out_file_ind1 = File(folder+before+after+"a0.pvd")
@@ -184,16 +245,6 @@ for N in range(3):
 	out_file_ind4 = File(folder+before+after+"a3.pvd")
 
 	string0 = 'N = '+str(N)+' and h = 1/'+str(nx)
-
-	# Save the solution to file
-
-	out_file_u << u
-
-	out_file_usupg << u_SUPG
-
-	out_file_ugls << u_GLS
-
-	out_file_udw << u_DW
 
 	##################################################################################
 
@@ -215,24 +266,6 @@ for N in range(3):
 
 		## ______________________________________________________________________ N=0
 
-
-
-	def a(u_, DF):
-		# Compute the indicator function
-		indicator = Expression('sqrt((a-b)*(a-b))', degree = 2, a = u_, b = DF)
-		indicator = interpolate(indicator, Q)
-		max_ind = np.amax(indicator.vector().array())
-
-		# Normalize indicator such that it's between [0,1].
-		if max_ind < 1:
-		   max_ind = 1.0
-
-		indicator = Expression('a/b', degree = 2, a = indicator, b = max_ind)
-		indicator = interpolate(indicator, Q)
-		return indicator
-
-
-
 	F_Hfilter0 = v*u_1tilde*dx + delta*delta*dot(grad(v), grad(u_1tilde))*dx - v*u*dx
 
 	a_Hfilter0 = lhs(F_Hfilter0)
@@ -248,11 +281,11 @@ for N in range(3):
 	u_1tilde = Function(Q)
 	solver0.solve(u_1tilde.vector(), b_Hfilter0)
 	DF = u_1tilde
-	out_file_u1tilde << u_1tilde
 
-	ind1 = a(u_tilde, DF)
-	out_file_ind1 << ind1
 	if N == 0:
+		out_file_u1tilde << u_1tilde
+		ind1 = a(u_tilde, DF)
+		out_file_ind1 << ind1
 		ind = ind1
 
 	## ______________________________________________________________________ N=1
@@ -272,10 +305,10 @@ for N in range(3):
 		u_2tilde = Function(Q)
 		solver1.solve(u_2tilde.vector(), b_Hfilter1)
 		DF = Expression('a+b-c',degree=2,a=DF,b=u_1tilde,c=u_2tilde)
-		out_file_u2tilde << u_2tilde
-		ind2 = a(u_tilde, DF)
-		out_file_ind2 << ind2
 		if N==1:
+			out_file_u2tilde << u_2tilde
+			ind2 = a(u_tilde, DF)
+			out_file_ind2 << ind2
 			ind = ind2
 
 
@@ -296,10 +329,10 @@ for N in range(3):
 			u_3tilde = Function(Q)
 			solver2.solve(u_3tilde.vector(), b_Hfilter2)
 			DF = Expression('a+b-2*c+d',degree=2,a=DF,b=u_1tilde,c=u_2tilde,d=u_3tilde)
-			out_file_u3tilde << u_3tilde
-			ind3 = a(u_tilde, DF)
-			out_file_ind3 << ind3
 			if N==2:
+				out_file_u3tilde << u_3tilde
+				ind3 = a(u_tilde, DF)
+				out_file_ind3 << ind3
 				ind = ind3
 
 	## ______________________________________________________________________ N=3
@@ -319,12 +352,11 @@ for N in range(3):
 				u_4tilde = Function(Q)
 				solver3.solve(u_4tilde.vector(), b_Hfilter3)
 				DF = Expression('a+b-3*c+3*d-e',degree=2,a=DF,b=u_1tilde,c=u_2tilde,d=u_3tilde,e=u_4tilde)
-				out_file_u4tilde << u_4tilde
-				ind4 = a(u_tilde, DF)
-				out_file_ind4 << ind4
 				if N == 3:
+					out_file_u4tilde << u_4tilde
+					ind4 = a(u_tilde, DF)
+					out_file_ind4 << ind4
 					ind = ind4
-
 
 
 	for SU in [0, 1]:
