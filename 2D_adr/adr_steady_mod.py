@@ -77,10 +77,11 @@ as_vector([1.0, 1.0])			# constant
 ('x[0]-0.5', '-(x[1]-0.5)')     # increasing with areas of 0 velocity
 ('x[1]-.5', '-(x[0]-.5)') 		# clockwise rotation
 ('-(x[1]-.5)', 'x[0]-.5')  		# counterclockwise rotation
+('x[1]-x[0]', '-x[0]-x[1]')		# spiral inward
 '''
 
 #velocity = as_vector([1.0, 1.0])
-velocity = Expression(('-(x[1]-.5)', 'x[0]-.5') , degree=1)
+velocity = Expression(('x[1]-x[0]', '-x[0]-x[1]') , degree=1)
 # make sure to change a,b in source function code
 
 ##################################################################################
@@ -93,13 +94,13 @@ x + y + t
 
 x, y = sym.symbols('x[0], x[1]')
 
-u_exact = x*x + y*y
+u_exact = x*x*x
 u_exact = sym.simplify(u_exact)
 
-a = -(y-0.5)
-b = x-0.5
+b1 = -y
+b2 = x
 
-fpy = -mu*(sym.diff(sym.diff(u_exact, x), x) + sym.diff(sym.diff(u_exact, y), y)) + a*sym.diff(u_exact, x) + b*sym.diff(u_exact, y) + sigma*u_exact
+fpy = -mu*(sym.diff(sym.diff(u_exact, x), x) + sym.diff(sym.diff(u_exact, y), y)) + b1*sym.diff(u_exact, x) + b2*sym.diff(u_exact, y) + sigma*u_exact
 fpy = sym.simplify(fpy)
 
 u_code = sym.printing.ccode(u_exact)
@@ -108,11 +109,11 @@ f_code = sym.printing.ccode(fpy)
 print('u =', u_code)
 print('f =', f_code)
 
-ue = Expression(u_code, degree=2)
+ue = Expression(u_code, degree=1)
 uee = interpolate(ue, Q)
 
-fe = Expression(f_code, degree=2)
-fee = interpolate(fe, Q)
+fe = Expression(f_code, degree=1)
+fee = project(fe, Q)
 
 out_file_ue = File(folder+"/u_exact_h"+str(nx)+".pvd")
 out_file_ue << uee
@@ -121,10 +122,7 @@ out_file_fe << fee
 
 
 f = Expression(f_code, degree=1)
-#f  = Constant(1.0)
-
-#u_D = Expression(u_code, degree=1)
-u_D = Constant(2.0)
+u_D = Expression(u_code, degree=1)
 bc = DirichletBC(Q, u_D, boundary)
 
 ##################################################################################
