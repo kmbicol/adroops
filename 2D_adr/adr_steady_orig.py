@@ -1,33 +1,7 @@
-# Copyright (C) 2007 Kristian B. Oelgaard
-#
-# This file is part of DOLFIN.
-#
-# DOLFIN is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# DOLFIN is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with DOLFIN. If not, see <http://www.gnu.org/licenses/>.
-#
-# Modified by Anders Logg, 2008
-# Modified by Johan Hake, 2008
-# Modified by Garth N. Wells, 2009
-#
-# This demo solves the time-dependent convection-diffusion equation by
-# a SUPG stabilized method. The velocity field used in the simulation
-# is the output from the Stokes (Taylor-Hood) demo.  The sub domains
-# for the different boundary conditions are computed by the demo
-# program in src/demo/subdomains.
-
 from dolfin import *
 from fenics import *
 import numpy as np
+import sympy as sym
 
 # Load mesh and subdomains
 mesh = UnitSquareMesh(20,20)
@@ -37,16 +11,48 @@ h = CellSize(mesh)
 Q = FunctionSpace(mesh, "CG", 1)
 
 # Initialise source function and previous solution function
-f  = Constant(1.0)
+#f  = Constant(1.0)
 
 # Boundary values
-u_D = Constant(0.0)
+#u_D = Constant(0.0)
 
 # Parameters
 sigma = 0.01
 mu = 0.001
 velocity = as_vector([1.0, 1.0])
+a = velocity[0]
+b = velocity[1]
 delta = h
+
+######################################
+
+x, y = sym.symbols('x[0], x[1]')
+
+u_exact = x*x*x
+u_exact = sym.simplify(u_exact)
+
+fpy = -mu*(sym.diff(sym.diff(u_exact, x), x) + sym.diff(sym.diff(u_exact, y), y)) 
+fpy += a*sym.diff(u_exact, x) + b*sym.diff(u_exact, y) 
+fpy += sigma*u_exact
+fpy = sym.simplify(fpy)
+
+u_code = sym.printing.ccode(u_exact)
+f_code = sym.printing.ccode(fpy)
+
+print('u =', u_code)
+print('f =', f_code)
+
+ue = Expression(u_code, degree=2)
+uee = interpolate(ue, Q)
+
+out_file_ue = File("results_steady/u_exact_h20.pvd")
+out_file_ue << uee
+
+f = Expression(f_code, degree=2)
+u_D = Expression(u_code, degree=2)
+
+#######################################
+
 
 # Test and trial functions
 u, v = TrialFunction(Q), TestFunction(Q)

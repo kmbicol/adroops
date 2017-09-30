@@ -1,14 +1,8 @@
-"""
-FEniCS tutorial demo program: Nonlinear Poisson equation.
-  -div(q(u)*grad(u)) = f   in the unit square.
-                   u = u_D on the boundary.
-"""
-
 from __future__ import print_function
-# Warning: from fenics import * will import both `sym` and
-# `q` from FEniCS. We therefore import FEniCS first and then
-# overwrite these objects.
 from fenics import *
+import sympy as sym
+
+## Calculates cpp code for Illiescu Test Function for Ex 4.1
 
 mu = 10**-6
 sigma = 1.0
@@ -17,50 +11,40 @@ a = velocity[0]
 b = velocity[1]
 
 # Use SymPy to compute f from the manufactured solution u
-x, y = sym.symbols('x[0], x[1]')
-u = (2*(0.25*0.25-(x-0.5)*(x-0.5)-(y-0.5)*(y-0.5)))/pow(mu,0.5)
+x, y, atan = sym.symbols('x[0], x[1], atan')
+
+# R = atan(g)
+
+c = 16 # 16sin(pi*t)
+h = x*(1-x)*y*(1-y)
+g = 2*mu**(-0.5)*(0.25*0.25 - (x - 0.5)*(x - 0.5) - (y - 0.5)*(y - 0.5) )
+
+Rx = (1+g**2)**(-1)*sym.diff(g,x)
+Ry = (1+g**2)**(-1)*sym.diff(g,y)
+
+u = c*(0.5*h+1/pi*h*atan)
 u = sym.simplify(u)
-u_poly = 16*x*(1-x)*y*(1-y)
-#u_atan = (0.5 + atan(x)/pi)
-f = u_poly#-mu*sym.diff(sym.diff(u, x), x) + sym.diff(sym.diff(u, y), y) + a*sym.diff(u, x) + b*sym.diff(u, y) + sigma*u
+
+ux = 0.5*sym.diff(h,x)+1/pi*(h*Rx+sym.diff(h,x)*atan)
+uy = 0.5*sym.diff(h,y)+1/pi*(h*Ry+sym.diff(h,y)*atan)
+
+uxx = 0.5*sym.diff(sym.diff(h,x),x) + 1/pi*(h*sym.diff(Rx,x) + 2*sym.diff(h,x)*Rx + sym.diff(sym.diff(h,x),x)*atan)
+uyy = 0.5*sym.diff(sym.diff(h,y),y) + 1/pi*(h*sym.diff(Ry,y) + 2*sym.diff(h,y)*Ry + sym.diff(sym.diff(h,y),y)*atan)
+
+# final source function
+f = -mu*(uxx + uyy) + a*ux + b*uy + sigma*u
 f = sym.simplify(f)
+
 u_code = sym.printing.ccode(u)
-u_poly_code = sym.printing.ccode(u_poly)
+g_code = sym.printing.ccode(g)
 f_code = sym.printing.ccode(f)
 print('u =', u_code)
+print('g =', g_code)
 print('f =', f_code)
 
-#sin(pi*t)
-
 '''
-# Create mesh and define function space
-mesh = UnitSquareMesh(8, 8)
-V = FunctionSpace(mesh, 'P', 1)
-
-# Define boundary condition
-u_D = Expression(u_code, degree=2)
-
-def boundary(x, on_boundary):
-    return on_boundary
-
-bc = DirichletBC(V, u_D, boundary)
-
-# Define variational problem
-u = Function(V)  # Note: not TrialFunction!
-v = TestFunction(V)
-f = Expression(f_code, degree=2)
-F = q(u)*dot(grad(u), grad(v))*dx - f*v*dx
-
-# Compute solution
-solve(F == 0, u, bc)
-
-# Plot solution
-plot(u)
-
-# Compute maximum error at vertices. This computation illustrates
-# an alternative to using compute_vertex_values as in poisson.py.
-u_e = interpolate(u_D, V)
-import numpy as np
-error_max = np.abs(u_e.vector().array() - u.vector().array()).max()
-print('error_max = ', error_max)
+## Code Output with atan replaced with atan(g_code)
+u = x[0]*x[1]*(5.09295817894065*atan(-2000.0*pow(x[0] - 0.5, 2) - 2000.0*pow(x[1] - 0.5, 2) + 125.0) + 8.0)*(x[0] - 1)*(x[1] - 1)
+g = -2000.0*pow(x[0] - 0.5, 2) - 2000.0*pow(x[1] - 0.5, 2) + 125.0
+f = (3.18309886183791e-7*x[0]*x[1]*(x[0] - 1)*(x[1] - 1)*(-(4000.0*x[0] - 2000.0)*(8000.0*x[0] - 4000.0)*(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0) - (4000.0*x[1] - 2000.0)*(8000.0*x[1] - 4000.0)*(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0) + 8000.0*pow(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0, 2) + 8000.0) + pow(pow(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0, 2) + 1, 2)*(0.954929658551372*atan(-2000.0*pow(x[0] - 0.5, 2) - 2000.0*pow(x[1] - 0.5, 2) + 125.0)*x[0]*(x[0] - 1)*(2*x[1] - 1) - 6.36619772367581e-7*atan(-2000.0*pow(x[0] - 0.5, 2) - 2000.0*pow(x[1] - 0.5, 2) + 125.0)*x[0]*(x[0] - 1) + 0.636619772367581*atan(-2000.0*pow(x[0] - 0.5, 2) - 2000.0*pow(x[1] - 0.5, 2) + 125.0)*x[1]*(2*x[0] - 1)*(x[1] - 1) - 6.36619772367581e-7*atan(-2000.0*pow(x[0] - 0.5, 2) - 2000.0*pow(x[1] - 0.5, 2) + 125.0)*x[1]*(x[1] - 1) + 1.0*x[0]*x[1]*(5.09295817894065*atan(-2000.0*pow(x[0] - 0.5, 2) - 2000.0*pow(x[1] - 0.5, 2) + 125.0) + 8.0)*(x[0] - 1)*(x[1] - 1) + 1.5*x[0]*x[1]*(x[0] - 1) + 1.0*x[0]*x[1]*(x[1] - 1) + 1.5*x[0]*(x[0] - 1)*(x[1] - 1) - 1.0e-6*x[0]*(x[0] - 1) + 1.0*x[1]*(x[0] - 1)*(x[1] - 1) - 1.0e-6*x[1]*(x[1] - 1)) + (pow(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0, 2) + 1)*(-0.636619772367581*x[0]*x[1]*(x[0] - 1)*(4000.0*x[0] - 2000.0)*(x[1] - 1) - 0.954929658551372*x[0]*x[1]*(x[0] - 1)*(x[1] - 1)*(4000.0*x[1] - 2000.0) + 6.36619772367581e-7*x[0]*(x[0] - 1)*(2*x[1] - 1)*(4000.0*x[1] - 2000.0) + 6.36619772367581e-7*x[1]*(2*x[0] - 1)*(4000.0*x[0] - 2000.0)*(x[1] - 1)))/pow(pow(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0, 2) + 1, 2)
 '''
