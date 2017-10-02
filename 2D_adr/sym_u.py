@@ -11,35 +11,47 @@ a = velocity[0]
 b = velocity[1]
 
 # Use SymPy to compute f from the manufactured solution u
-x, y, atan = sym.symbols('x[0], x[1], atan')
+'''
+x, y, t = sym.symbols('x[0], x[1], t')
 
 # R = atan(g)
 
-c = 16 # 16sin(pi*t)
+old code where i was dumb and didn't know sym.atan was a thing....
+
+c = 16*sym.sin(pi*t)*sym.atan(t)
 h = x*(1-x)*y*(1-y)
 g = 2*mu**(-0.5)*(0.25*0.25 - (x - 0.5)*(x - 0.5) - (y - 0.5)*(y - 0.5) )
 
 Rx = (1+g**2)**(-1)*sym.diff(g,x)
 Ry = (1+g**2)**(-1)*sym.diff(g,y)
 
-u = c*(0.5*h+1/pi*h*atan)
+u = c*(0.5*h+1/pi*h*sym.atan(g))
 u = sym.simplify(u)
 
-ux = 0.5*sym.diff(h,x)+1/pi*(h*Rx+sym.diff(h,x)*atan)
-uy = 0.5*sym.diff(h,y)+1/pi*(h*Ry+sym.diff(h,y)*atan)
+ux = 0.5*sym.diff(h,x)+1/pi*(h*Rx+sym.diff(h,x)*sym.atan(g))
+uy = 0.5*sym.diff(h,y)+1/pi*(h*Ry+sym.diff(h,y)*sym.atan(g))
 
-uxx = 0.5*sym.diff(sym.diff(h,x),x) + 1/pi*(h*sym.diff(Rx,x) + 2*sym.diff(h,x)*Rx + sym.diff(sym.diff(h,x),x)*atan)
-uyy = 0.5*sym.diff(sym.diff(h,y),y) + 1/pi*(h*sym.diff(Ry,y) + 2*sym.diff(h,y)*Ry + sym.diff(sym.diff(h,y),y)*atan)
+uxx = 0.5*sym.diff(sym.diff(h,x),x) + 1/pi*(h*sym.diff(Rx,x) + 2*sym.diff(h,x)*Rx + sym.diff(sym.diff(h,x),x)*sym.atan(g))
+uyy = 0.5*sym.diff(sym.diff(h,y),y) + 1/pi*(h*sym.diff(Ry,y) + 2*sym.diff(h,y)*Ry + sym.diff(sym.diff(h,y),y)*sym.atan(g))
+'''
+
+x, y, t = sym.symbols('x[0], x[1], t')
+
+c = 16*sym.sin(pi*t)
+h = x*(1-x)*y*(1-y)
+g = 2*mu**(-0.5)*(0.25*0.25 - (x - 0.5)*(x - 0.5) - (y - 0.5)*(y - 0.5) )
+
+u = c*(0.5*h+1/pi*h*sym.atan(g))
+u = sym.simplify(u)
 
 # final source function
-f = -mu*(uxx + uyy) + a*ux + b*uy + sigma*u
+f = -mu*(sym.diff(sym.diff(u,x),x)+sym.diff(sym.diff(u,y),y)) + a*sym.diff(u,x) + b*sym.diff(u,y) + sigma*u
 f = sym.simplify(f)
 
 u_code = sym.printing.ccode(u)
-g_code = sym.printing.ccode(g)
 f_code = sym.printing.ccode(f)
+
 print('u =', u_code)
-print('g =', g_code)
 print('f =', f_code)
 
 '''
