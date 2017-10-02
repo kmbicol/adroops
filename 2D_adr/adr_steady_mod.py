@@ -146,8 +146,13 @@ bc = DirichletBC(Q, u_D, boundary)
 
 ## Define expressions used in variational forms
 
-# Galerkin variational problem
-F = mu*dot(grad(v), grad(u))*dx + v*dot(velocity, grad(u))*dx + sigma*v*u*dx - f*v*dx
+## Galerkin variational problem
+
+# No time dependence
+# F = mu*dot(grad(v), grad(u))*dx + v*dot(velocity, grad(u))*dx + sigma*v*u*dx - f*v*dx
+
+# First time step (time dependent code)
+F = mu*dot(grad(v), grad(u))*dx + v*dot(velocity, grad(u))*dx + (sigma + 1.0/dt)*v*u*dx - f*v*dx 
 a = lhs(F)
 L = rhs(F)
 
