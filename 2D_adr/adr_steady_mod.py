@@ -40,7 +40,7 @@ mu = 0.001
 ## File Output Details
 
 scalename = 1
-folder ="P"+str(P)+"h1_"+str(nx)+"_delta"+str(scalename)+"h"
+folder ="results_steady/P"+str(P)+"h1_"+str(nx)+"_delta"+str(scalename)+"h"
 
 
 ##################################################################################
@@ -80,7 +80,7 @@ as_vector([1.0, 1.0])			# constant
 ('x[1]-x[0]', '-x[0]-x[1]')		# spiral inward
 '''
 
-velocity = as_vector([2.0, 3.0])
+velocity = as_vector([1.0, 1.0])
 #velocity = Expression(('x[1]-x[0]', '-x[0]-x[1]') , degree=1)
 # make sure to change a,b in source function code
 
@@ -149,10 +149,10 @@ bc = DirichletBC(Q, u_D, boundary)
 ## Galerkin variational problem
 
 # No time dependence
-# F = mu*dot(grad(v), grad(u))*dx + v*dot(velocity, grad(u))*dx + sigma*v*u*dx - f*v*dx
+F = mu*dot(grad(v), grad(u))*dx + v*dot(velocity, grad(u))*dx + sigma*v*u*dx - f*v*dx
 
 # First time step (time dependent code)
-F = mu*dot(grad(v), grad(u))*dx + v*dot(velocity, grad(u))*dx + (sigma + 1.0/dt)*v*u*dx - f*v*dx 
+#F = mu*dot(grad(v), grad(u))*dx + v*dot(velocity, grad(u))*dx + (sigma + 1.0/dt)*v*u*dx - f*v*dx 
 a = lhs(F)
 L = rhs(F)
 
@@ -161,7 +161,7 @@ r = - mu*div(grad(u)) + dot(velocity, grad(u)) + sigma*u - f # Lu - f
 vnorm = sqrt(dot(velocity, velocity))
 
 # SUPG stabilisation terms
-F_SUPG = F + (h/(2.0*vnorm))*dot(velocity, grad(v))*r*dx
+F_SUPG = F - (h/(2.0*vnorm))*dot(velocity, grad(v))*r*dx
 a_SUPG = lhs(F_SUPG)
 L_SUPG = rhs(F_SUPG)
 
