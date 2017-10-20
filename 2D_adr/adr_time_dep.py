@@ -1,82 +1,95 @@
-# Copyright (C) 2007 Kristian B. Oelgaard
-#
-# This file is part of DOLFIN.
-#
-# DOLFIN is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# DOLFIN is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with DOLFIN. If not, see <http://www.gnu.org/licenses/>.
-#
-# Modified by Anders Logg, 2008
-# Modified by Johan Hake, 2008
-# Modified by Garth N. Wells, 2009
-#
-# This demo solves the time-dependent convection-diffusion equation by
-# a SUPG stabilized method. The velocity field used in the simulation
-# is the output from the Stokes (Taylor-Hood) demo.  The sub domains
-# for the different boundary conditions are computed by the demo
-# program in src/demo/subdomains.
-
 from dolfin import *
-from fenics import *
-import numpy as np
+import math as m
+
+print("\n (1) SUPG \n (2) GLS \n (3) DW \n (4) VMS \n (default) Galerkin")
+method = input("Choose a stabilization method: ")
+#nx = input("h = 1/nx, let nx = ")
+nx = 300
 
 # Load mesh and subdomains
-mesh = UnitSquareMesh(20,20)
+mesh = UnitSquareMesh(nx,nx)
 h = CellSize(mesh)
-delta = 1.0/20.0
 
 # Create FunctionSpaces
-Q = FunctionSpace(mesh, "CG", 1) # CG == Continuous Galerkin (Lagrange)
+Q = FunctionSpace(mesh, "CG", 2)
 
 # Create velocity Function from file
-velocity = as_vector([1.0, 1.0])
+velocity = as_vector([2.0, 3.0])
 
-# Parameters
-T = 1
-dt = 0.01
-t = dt
-sigma = 1.0
-mu = 0.001
-
-# Initialise source function and previous solution function 
-# f0 = Constant(1.0) 
-t0=0
-f = Expression('3+sigma*(t+x[0]+x[1])', degree = 1, sigma = sigma, t = t0) 
-f0 = f
-f.t += dt
+# Initialise source function and previous solution function
+#f  = Constant(1.0)
 u0 = Function(Q)
+R = 2
 
 # Boudanry values
 u_D = Constant(0.0)
 
+# Parameters
+T = 2.0
+dt = 0.001
+t = dt
+sigma = 1.0
+mu = 10**(-6)
+
 # Test and trial functions
 u, v = TrialFunction(Q), TestFunction(Q)
+u_exact = Expression('-16*x[0]*x[1]*(x[0] - 1)*(x[1] - 1)*(0.318309886183791*atan(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0) - 0.5)*sin(3.14159265358979*t)', degree = R, t = t)
+adr_f = Expression('(-5.09295817894065e-6*x[0]*x[1]*(x[0] - 1)*(x[1] - 1)*((4000.0*x[0] - 2000.0)*(8000.0*x[0] - 4000.0) + (4000.0*x[1] - 2000.0)*(8000.0*x[1] - 4000.0))*(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0)*sin(3.14159265358979*t) + pow(pow(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0, 2) + 1, 2)*(0.318309886183791*atan(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0) - 0.5)*(-16.0*x[0]*x[1]*(x[0] - 1)*(x[1] - 1)*sin(3.14159265358979*t) - 50.2654824574367*x[0]*x[1]*(x[0] - 1)*(x[1] - 1)*cos(3.14159265358979*t) - 48.0*x[0]*x[1]*(x[0] - 1)*sin(3.14159265358979*t) - 32.0*x[0]*x[1]*(x[1] - 1)*sin(3.14159265358979*t) - 48.0*x[0]*(x[0] - 1)*(x[1] - 1)*sin(3.14159265358979*t) + 3.2e-5*x[0]*(x[0] - 1)*sin(3.14159265358979*t) - 32.0*x[1]*(x[0] - 1)*(x[1] - 1)*sin(3.14159265358979*t) + 3.2e-5*x[1]*(x[1] - 1)*sin(3.14159265358979*t)) + (pow(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0, 2) + 1)*(-10.1859163578813*x[0]*x[1]*(x[0] - 1)*(4000.0*x[0] - 2000.0)*(x[1] - 1) - 15.278874536822*x[0]*x[1]*(x[0] - 1)*(x[1] - 1)*(4000.0*x[1] - 2000.0) + 0.0407436654315252*x[0]*x[1]*(x[0] - 1)*(x[1] - 1) + 1.01859163578813e-5*x[0]*x[1]*(x[0] - 1)*(4000.0*x[1] - 2000.0) + 1.01859163578813e-5*x[0]*x[1]*(4000.0*x[0] - 2000.0)*(x[1] - 1) + 1.01859163578813e-5*x[0]*(x[0] - 1)*(x[1] - 1)*(4000.0*x[1] - 2000.0) + 1.01859163578813e-5*x[1]*(x[0] - 1)*(4000.0*x[0] - 2000.0)*(x[1] - 1))*sin(3.14159265358979*t))/pow(pow(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0, 2) + 1, 2)', degree = R, t = t)
 
-# Mid-point solution  (for Crank-Nicolson)
+f = Expression(adr_f.cppcode, degree = R, t = t)
+f0 = Expression(adr_f.cppcode, degree = R, t = 0)
+'''
+# Mid-point solution
 u_mid = 0.5*(u0 + u)
 f_mid = 0.5*(f0 + f)
 
+
 # Residual
-r = u - u0 + dt*(- mu*div(grad(u_mid)) + dot(velocity, grad(u_mid)) + sigma*u_mid - f)
+r = u - u0 + dt*(- mu*div(grad(u_mid)) + dot(velocity, grad(u_mid)) + sigma*u_mid - f_mid)
+
 
 # Galerkin variational problem
 F = v*(u - u0)*dx + dt*(mu*dot(grad(v), grad(u_mid))*dx \
                         + v*dot(velocity, grad(u_mid))*dx \
                         + sigma*v*u*dx \
                         - f_mid*v*dx)
+'''
 
-# Add SUPG stabilisation terms
-# vnorm = sqrt(dot(velocity, velocity))
-# F += (h/(2.0*vnorm))*dot(velocity, grad(v))*r*dx
+# Backward Euler
+r = u - u0 + dt*(- mu*div(grad(u)) + dot(velocity, grad(u)) + sigma*u - f)
+
+
+# Galerkin variational problem
+F = v*(u - u0)*dx + dt*(mu*dot(grad(v), grad(u))*dx \
+                        + v*dot(velocity, grad(u))*dx \
+                        + sigma*v*u*dx \
+                        - f*v*dx)
+
+# Add stabilisation terms
+
+# residual
+r = u - u0 + dt*(- mu*div(grad(u)) + dot(velocity, grad(u)) + sigma*u - f)
+vnorm = sqrt(dot(velocity, velocity))
+tau = h/(2.0*vnorm)
+
+if method == 1: # SUPG
+    F += (h/(2.0*vnorm))*dot(velocity, grad(v))*r*dx
+    #F += tau*dot(velocity, grad(v))*r*dx
+    methodname = "SUPG"
+elif method == 2: # GLS
+    F += tau*(- mu*div(grad(v)) + dot(velocity, grad(v)) + sigma*v)*r*dx
+    methodname = "GLS"
+elif method == 3: # DW
+    F -= tau*(- mu*div(grad(v)) - dot(velocity, grad(v)) + sigma*v)*r*dx
+    methodname = "DW"
+elif method == 4: # VMS
+    hh = 1.0/nx
+    ttau = m.pow((4.0*mu/(hh*hh) + 2.0*vnorm/hh + sigma),-1)
+    F -= (ttau)*(- mu*div(grad(v)) - dot(velocity, grad(v)) + sigma*v)*r*dx
+    methodname = "VMS"
+else:
+    methodname = "Galerk"
+    # Galerkin with no stabilization terms
 
 # Create bilinear and linear forms
 a = lhs(F)
@@ -92,169 +105,52 @@ A = assemble(a)
 bc.apply(A)
 
 # Create linear solver and factorize matrix
-u = Function(Q)
 solver = LUSolver(A)
 solver.parameters["reuse_factorization"] = True
 
+# Output file
+out_file = File("results_full_ilie_BE/h"+str(nx)+"u_"+methodname+".pvd")
+if method == 5:
+    out_file_ue = File("results_full_ilie_BE/h"+str(nx)+"u_exact.pvd")
 # Set intial condition
 u = u0
 
-# Output files
-out_file = File("results_time_dep/u_nofilter.pvd")
-out_file_utilde = File("results_time_dep/utilde.pvd")
-out_file_ind = File("results_time_dep/a.pvd")
-out_file_ubar = File("results_time_dep/ubar.pvd")
+# Time-stepping, plot initial condition.
+i = 0
 
-#while t - T < DOLFIN_EPS:
+
+# Create progress bar
+progress = Progress('Time-stepping')
+set_log_level(PROGRESS)
+
+
+while t - T < DOLFIN_EPS:
     # Assemble vector and apply boundary conditions
-b = assemble(L)
-bc.apply(b)
-# Solve the linear system (re-use the already factorized matrix A)
-solver.solve(u.vector(), b)
+    b = assemble(L)
+    bc.apply(b)
 
-out_file << (u, t)
+    # Solve the linear system (re-use the already factorized matrix A)
+    solver.solve(u.vector(), b)
 
-########################################################
+    # Exact solution in time
+    if method == 5:
+        ue = Expression(u_exact.cppcode, degree = R, t = t)
+        uee = interpolate(ue, Q)
+        uee.rename('u','u')
+        out_file_ue << (uee, float(t))
+        u_exact.t += dt
 
-# Helmholtz filter to compute the indicator function
-u_tilde = TrialFunction(Q)
-#F_Hfilter = v*u_tilde*dx + delta*delta*dot(grad(v), grad(u_tilde))*dx - v*u*dx 
-a_Hfilter = v*u_tilde*dx + delta*delta*dot(grad(v), grad(u_tilde))*dx #lhs(F_Hfilter)
-L_Hfilter = v*u*dx #rhs(F_Hfilter)
+    # Copy solution from previous interval
+    u0 = u
+    f0.t += dt
+    f.t += dt
 
-A_Hfilter = assemble(a_Hfilter)
-bc.apply(A_Hfilter)
-solver1 = LUSolver(A_Hfilter)
-solver1.parameters["reuse_factorization"] = True
+    # Save the solution to file
+    out_file << (u, t)
 
-########################################################
-b_Hfilter = assemble(L_Hfilter)
-bc.apply(b_Hfilter)
-u_tilde = Function(Q)
-solver1.solve(u_tilde.vector(), b_Hfilter)
+    # Move to next interval and adjust boundary condition
+    t += dt
+    i += 1
 
-out_file_utilde << (u_tilde, t)
-
-########################################################
-
-u_bar = TrialFunction(Q)
-indicator = Expression('sqrt((a-b)*(a-b))', degree = 2, a = u, b = u_tilde)
-indicator = interpolate(indicator, Q)
-
-F_filter = v*u_bar*dx + delta*delta*dot(grad(v), indicator*grad(u_bar))*dx - v*u*dx 
-a_filter = lhs(F_filter)
-L_filter = rhs(F_filter)
-
-A_filter = assemble(a_filter)
-bc.apply(A_filter)
-solver2 = LUSolver(A_filter)
-solver2.parameters["reuse_factorization"] = True
-
-#######################################################
-
-# Compute the indicator function N = 0
-max_ind = np.amax(indicator.vector().array())
-
-if max_ind < 1:
-    max_ind = 1.0
-
-indicator = Expression('a/b', degree = 2, a = indicator, b = max_ind)
-indicator = interpolate(indicator, Q)
-
-out_file_ind << (indicator, t)
-
-# Apply the filter dependent on indicator output
-b_filter = assemble(L_filter)
-bc.apply(b_filter)
-u_bar = Function(Q)
-solver2.solve(u_bar.vector(), b_filter)
-
-out_file_ubar << (u_bar, t)
-
-# Copy solution from previous interval
-u0.assign(u_bar)
-
-#u0.assign(u) # no filter code
-f0=f
-
-# Move to next interval and adjust boundary condition
-t += dt
-f.t = t    
-
-
-
-################################################################## next time step
-
-b = assemble(L)
-bc.apply(b)
-# Solve the linear system (re-use the already factorized matrix A)
-solver.solve(u.vector(), b)
-
-out_file << (u, t)
-
-########################################################
-
-# Helmholtz filter to compute the indicator function
-u_tilde = TrialFunction(Q)
-#F_Hfilter = v*u_tilde*dx + delta*delta*dot(grad(v), grad(u_tilde))*dx - v*u*dx 
-a_Hfilter = v*u_tilde*dx + delta*delta*dot(grad(v), grad(u_tilde))*dx #lhs(F_Hfilter)
-L_Hfilter = v*u*dx #rhs(F_Hfilter)
-
-A_Hfilter = assemble(a_Hfilter)
-bc.apply(A_Hfilter)
-solver1 = LUSolver(A_Hfilter)
-solver1.parameters["reuse_factorization"] = True
-
-########################################################
-b_Hfilter = assemble(L_Hfilter)
-bc.apply(b_Hfilter)
-u_tilde = Function(Q)
-solver1.solve(u_tilde.vector(), b_Hfilter)
-
-out_file_utilde << (u_tilde, t)
-
-########################################################
-
-u_bar = TrialFunction(Q)
-indicator = Expression('sqrt((a-b)*(a-b))', degree = 2, a = u, b = u_tilde)
-indicator = interpolate(indicator, Q)
-
-F_filter = v*u_bar*dx + delta*delta*dot(grad(v), indicator*grad(u_bar))*dx - v*u*dx 
-a_filter = lhs(F_filter)
-L_filter = rhs(F_filter)
-
-A_filter = assemble(a_filter)
-bc.apply(A_filter)
-solver2 = LUSolver(A_filter)
-solver2.parameters["reuse_factorization"] = True
-
-#######################################################
-
-# Compute the indicator function N = 0
-max_ind = np.amax(indicator.vector().array())
-
-if max_ind < 1:
-    max_ind = 1.0
-
-indicator = Expression('a/b', degree = 2, a = indicator, b = max_ind)
-indicator = interpolate(indicator, Q)
-
-out_file_ind << (indicator, t)
-
-# Apply the filter dependent on indicator output
-b_filter = assemble(L_filter)
-bc.apply(b_filter)
-u_bar = Function(Q)
-solver2.solve(u_bar.vector(), b_filter)
-
-out_file_ubar << (u_bar, t)
-
-# Copy solution from previous interval
-u0.assign(u_bar)
-
-#u0.assign(u) # no filter code
-f0=f
-
-# Move to next interval and adjust boundary condition
-t += dt
-f.t = t    
+    # Update progress bar
+    progress.update(t / T)
