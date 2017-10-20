@@ -1,16 +1,16 @@
 from dolfin import *
 from fenics import *
 import numpy as np
-import sympy as sym
 import math as m
 
 #test = input('1 f=t, 2 Iliescu, 3 Manufactured ')
-test = 1
+test = 4
 EFR = 0 #EFR = input('EFR: (1) Yes (0) No ') #EFR = 0
 nx = input('h=1/nx, set nx as ') #nx = 100
 delta = 1.0/20.0  # filtering radius
 
 P = 1
+R = 2 # degree of all expressions
 
 # Create mesh
 mesh = UnitSquareMesh(nx,nx)
@@ -23,7 +23,7 @@ t = 0
 # Simulation Parameters
 if test == 1:
     # My test problem
-    T = 1.0 # final time
+    T = 0.01 # final time
     dt = 0.01 # time step size
     tt = 0.01
     num_steps = int(round(T / tt, 0))           
@@ -32,17 +32,17 @@ if test == 1:
     mu = 0.001
     velocity = as_vector([1.0, 1.0]) # convection velocity
     u_D = Constant(0.0)
-    u_exact = Constant(0.0)
-    adr_f = Expression('t', degree = 1, t=t)
+    #adr_f = Expression('t', degree = R, t=t)
+    adr_f = Expression('1.0', degree = R, t=t)
 
     folder = 'results_time_dep_simp'
     folder +="/P"+str(P)+"h1_"+str(nx)+"/"
 
-elif test == 2:
+elif test == 2 or test == 4:
     # Iliescu Ex 4.1
     T = 2.0 #2.0 # final time
-    dt = 0.001 # time step size
-    tt = 0.001
+    dt = 0.01 # time step size
+    tt = 0.01
     num_steps = int(round(T / tt, 0))           
 
     sigma = 1.0       # reaction coefficient
@@ -56,7 +56,7 @@ elif test == 2:
 
 elif test == 3:
     # My test problem
-    T = 1.0 # final time
+    T = 0.01 # final time
     dt = 0.01 # time step size
     tt = 0.01
     num_steps = int(round(T / tt, 0))           
@@ -64,11 +64,11 @@ elif test == 3:
     sigma = 0.01
     mu = 0.001
     velocity = as_vector([1.0, 1.0]) # convection velocity
-    u_exact = Expression('t+x[0]+x[1]', degree = 1, sigma = sigma, mu = mu)
-    adr_f = Expression('3+sigma*(t+x[0]+x[1])', degree = 1, sigma = sigma, mu=mu, t = t)
-    u_D = Expression(u_exact.cppcode, degree = 1, sigma = sigma, mu=mu)
+    u_exact = Expression('t+x[0]+x[1]', degree = R, t = t)
+    adr_f = Expression('0.01*t + 0.01*x[0] + 0.01*x[1] + 3.0', degree = R, t = t)
+    u_D = Expression(u_exact.cppcode, degree = R, t = t)
 
-    folder = 'results_time_dep_simp'
+    folder = 'results_time_dep_manu'
     folder +="/P"+str(P)+"h1_"+str(nx)+"/"
 
 else:
@@ -96,16 +96,32 @@ u_tilde = Function(Q)
 u_bar = Function(Q)
 
 # Define expressions used in variational forms
-if test == 3:
+if test == 2: # magnitude 1
     u_D = Constant(0.0)
-    u_exact = Expression('-16*x[0]*x[1]*(x[0] - 1)*(x[1] - 1)*(0.318309886183791*atan(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0) - 0.5)*sin(3.14159265358979*t)', degree = 1, t = t)
-    adr_f = Expression('(-5.09295817894065e-6*x[0]*x[1]*(x[0] - 1)*(x[1] - 1)*((4000.0*x[0] - 2000.0)*(8000.0*x[0] - 4000.0) + (4000.0*x[1] - 2000.0)*(8000.0*x[1] - 4000.0))*(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0) + pow(pow(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0, 2) + 1, 2)*(0.318309886183791*atan(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0) - 0.5)*(-16.0*x[0]*x[1]*(x[0] - 1)*(x[1] - 1) - 48.0*x[0]*x[1]*(x[0] - 1) - 32.0*x[0]*x[1]*(x[1] - 1) - 48.0*x[0]*(x[0] - 1)*(x[1] - 1) + 3.2e-5*x[0]*(x[0] - 1) - 32.0*x[1]*(x[0] - 1)*(x[1] - 1) + 3.2e-5*x[1]*(x[1] - 1)) + (pow(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0, 2) + 1)*(-10.1859163578813*x[0]*x[1]*(x[0] - 1)*(4000.0*x[0] - 2000.0)*(x[1] - 1) - 15.278874536822*x[0]*x[1]*(x[0] - 1)*(x[1] - 1)*(4000.0*x[1] - 2000.0) + 0.0407436654315252*x[0]*x[1]*(x[0] - 1)*(x[1] - 1) + 1.01859163578813e-5*x[0]*x[1]*(x[0] - 1)*(4000.0*x[1] - 2000.0) + 1.01859163578813e-5*x[0]*x[1]*(4000.0*x[0] - 2000.0)*(x[1] - 1) + 1.01859163578813e-5*x[0]*(x[0] - 1)*(x[1] - 1)*(4000.0*x[1] - 2000.0) + 1.01859163578813e-5*x[1]*(x[0] - 1)*(4000.0*x[0] - 2000.0)*(x[1] - 1)))*sin(3.14159265358979*t)/pow(pow(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0, 2) + 1, 2)', degree = 1, t=t)
+    folder += "1_"
+    u_exact = Expression('-x[0]*x[1]*(x[0] - 1)*(x[1] - 1)*(0.318309886183791*atan(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0) - 0.5)*sin(3.14159265358979*t)', degree = R, t = t)
+    adr_f = Expression('(-3.18309886183791e-7*x[0]*x[1]*(x[0] - 1)*(x[1] - 1)*((4000.0*x[0] - 2000.0)*(8000.0*x[0] - 4000.0) + (4000.0*x[1] - 2000.0)*(8000.0*x[1] - 4000.0))*(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0)*sin(3.14159265358979*t) + pow(pow(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0, 2) + 1, 2)*(0.318309886183791*atan(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0) - 0.5)*(-1.0*x[0]*x[1]*(x[0] - 1)*(x[1] - 1)*sin(3.14159265358979*t) - 3.14159265358979*x[0]*x[1]*(x[0] - 1)*(x[1] - 1)*cos(3.14159265358979*t) - 3.0*x[0]*x[1]*(x[0] - 1)*sin(3.14159265358979*t) - 2.0*x[0]*x[1]*(x[1] - 1)*sin(3.14159265358979*t) - 3.0*x[0]*(x[0] - 1)*(x[1] - 1)*sin(3.14159265358979*t) + 2.0e-6*x[0]*(x[0] - 1)*sin(3.14159265358979*t) - 2.0*x[1]*(x[0] - 1)*(x[1] - 1)*sin(3.14159265358979*t) + 2.0e-6*x[1]*(x[1] - 1)*sin(3.14159265358979*t)) + (pow(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0, 2) + 1)*(-0.636619772367581*x[0]*x[1]*(x[0] - 1)*(4000.0*x[0] - 2000.0)*(x[1] - 1) - 0.954929658551372*x[0]*x[1]*(x[0] - 1)*(x[1] - 1)*(4000.0*x[1] - 2000.0) + 0.00254647908947033*x[0]*x[1]*(x[0] - 1)*(x[1] - 1) + 6.36619772367581e-7*x[0]*x[1]*(x[0] - 1)*(4000.0*x[1] - 2000.0) + 6.36619772367581e-7*x[0]*x[1]*(4000.0*x[0] - 2000.0)*(x[1] - 1) + 6.36619772367581e-7*x[0]*(x[0] - 1)*(x[1] - 1)*(4000.0*x[1] - 2000.0) + 6.36619772367581e-7*x[1]*(x[0] - 1)*(4000.0*x[0] - 2000.0)*(x[1] - 1))*sin(3.14159265358979*t))/pow(pow(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0, 2) + 1, 2)', degree = R, t=t)
 
-f_n = Expression(adr_f.cppcode, degree = 1, t = t) 
-f = Expression(adr_f.cppcode, degree = 1, t = t+tt)
+if test == 4: # magnitude 16
+    folder += "16_"
+    u_D = Constant(0.0)
+    u_exact = Expression('-16*x[0]*x[1]*(x[0] - 1)*(x[1] - 1)*(0.318309886183791*atan(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0) - 0.5)*sin(3.14159265358979*t)', degree = R, t = t)
+    adr_f = Expression('(-5.09295817894065e-6*x[0]*x[1]*(x[0] - 1)*(x[1] - 1)*((4000.0*x[0] - 2000.0)*(8000.0*x[0] - 4000.0) + (4000.0*x[1] - 2000.0)*(8000.0*x[1] - 4000.0))*(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0)*sin(3.14159265358979*t) + pow(pow(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0, 2) + 1, 2)*(0.318309886183791*atan(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0) - 0.5)*(-16.0*x[0]*x[1]*(x[0] - 1)*(x[1] - 1)*sin(3.14159265358979*t) - 50.2654824574367*x[0]*x[1]*(x[0] - 1)*(x[1] - 1)*cos(3.14159265358979*t) - 48.0*x[0]*x[1]*(x[0] - 1)*sin(3.14159265358979*t) - 32.0*x[0]*x[1]*(x[1] - 1)*sin(3.14159265358979*t) - 48.0*x[0]*(x[0] - 1)*(x[1] - 1)*sin(3.14159265358979*t) + 3.2e-5*x[0]*(x[0] - 1)*sin(3.14159265358979*t) - 32.0*x[1]*(x[0] - 1)*(x[1] - 1)*sin(3.14159265358979*t) + 3.2e-5*x[1]*(x[1] - 1)*sin(3.14159265358979*t)) + (pow(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0, 2) + 1)*(-10.1859163578813*x[0]*x[1]*(x[0] - 1)*(4000.0*x[0] - 2000.0)*(x[1] - 1) - 15.278874536822*x[0]*x[1]*(x[0] - 1)*(x[1] - 1)*(4000.0*x[1] - 2000.0) + 0.0407436654315252*x[0]*x[1]*(x[0] - 1)*(x[1] - 1) + 1.01859163578813e-5*x[0]*x[1]*(x[0] - 1)*(4000.0*x[1] - 2000.0) + 1.01859163578813e-5*x[0]*x[1]*(4000.0*x[0] - 2000.0)*(x[1] - 1) + 1.01859163578813e-5*x[0]*(x[0] - 1)*(x[1] - 1)*(4000.0*x[1] - 2000.0) + 1.01859163578813e-5*x[1]*(x[0] - 1)*(4000.0*x[0] - 2000.0)*(x[1] - 1))*sin(3.14159265358979*t))/pow(pow(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0, 2) + 1, 2)', degree = R, t = t)
+
+f_n = Expression(adr_f.cppcode, degree = R, t = t) 
+f = Expression(adr_f.cppcode, degree = R, t = t+tt)
 
 # Define boundary condition
 bc = DirichletBC(Q, u_D, boundary)
+
+
+# Define initial condition
+
+u_n = interpolate(u_D, Q)
+u_n_VMS = interpolate(u_D, Q)
+u_n_DW = interpolate(u_D, Q)
+u_n_GLS = interpolate(u_D, Q)
+u_n_SUPG = interpolate(u_D, Q)
 
 # Define for time stepping
 f_mid = 0.5*(f_n + f)
@@ -122,20 +138,32 @@ set_log_level(PROGRESS)
 ## Non-filtered Solution 
 
 # Define variational problem for step 1 (solve on coarse grid)
+# Crank-Nicolson
+'''
 F1 = v*(u - u_n)*dx + dt*(mu*dot(grad(v), grad(u_mid))*dx \
                         + v*dot(velocity, grad(u_mid))*dx \
                         + sigma*v*u*dx \
                         - f_mid*v*dx)
+'''
+# Backward Euler
+
+F1 = v*(u - u_n)*dx + dt*(mu*dot(grad(v), grad(u))*dx \
+                        + v*dot(velocity, grad(u))*dx \
+                        + sigma*v*u*dx \
+                        - f*v*dx)
+
+
 a1 = lhs(F1)
 L1 = rhs(F1)
 
 ###########################################################
 
+
 ## Other Stabilization Methods
 if EFR == 0:
 
     # Residual
-    r = - mu*div(grad(u)) + dot(velocity, grad(u)) + sigma*u - f # Lu - f
+    r = u - u_n + dt*(- mu*div(grad(u)) + dot(velocity, grad(u)) + sigma*u - f) # Lu - f
     vnorm = sqrt(dot(velocity, velocity))
 
     # tau Stabilization Parameter
@@ -143,8 +171,8 @@ if EFR == 0:
     tau = h/(2.0*vnorm)
 
     # SUPG stabilisation terms
-#    F_SUPG = F1 + tau*dot(velocity, grad(v))*r*dx
-    F_SUPG = F1 + tau*(0.5*div(velocity*v)+0.5*dot(velocity, grad(v)))*r*dx
+    F_SUPG = F1 + tau*dot(velocity, grad(v))*r*dx
+#    F_SUPG = F1 + tau*(0.5*div(velocity*v)+0.5*dot(velocity, grad(v)))*r*dx
     a_SUPG = lhs(F_SUPG)
     L_SUPG = rhs(F_SUPG)
 
@@ -158,7 +186,7 @@ if EFR == 0:
     a_DW = lhs(F_DW)
     L_DW = rhs(F_DW)
 
-    # DW stabilization terms
+    # VMS stabilization terms
     hh = 1.0/nx
     ttau = m.pow((4.0*mu/(hh*hh) + 2.0*vnorm/hh + sigma),-1)
     F_VMS = F1 - (ttau)*(- mu*div(grad(v)) - dot(velocity, grad(v)) + sigma*v)*r*dx #LvRu
@@ -229,7 +257,7 @@ if EFR == 0:
         u_n_DW.assign(u_DW_)
         u_n_VMS.assign(u_VMS_)
 
-        f_n = Expression(f.cppcode, degree = 1, sigma = sigma, t = t)
+        f_n = Expression(f.cppcode, degree = R, sigma = sigma, t = t)
         fee = interpolate(f_n, Q)
         fee.rename('f','f')
         out_file_fe << (fee, float(t+tt))
@@ -237,11 +265,11 @@ if EFR == 0:
         f_n.t += tt
 
         # Exact solution in time
-        #ue = Expression(u_exact.cppcode, degree = 1, t = t)
-        #uee = interpolate(ue, Q)
-        #uee.rename('u','u')
-        #out_file_ue << (uee, float(t+tt))
-        #u_exact.t += tt
+        ue = Expression(u_exact.cppcode, degree = R, t = t)
+        uee = interpolate(ue, Q)
+        uee.rename('u','u')
+        out_file_ue << (uee, float(t+tt))
+        u_exact.t += tt
 
         # Update progress bar
         progress.update(t / T)
@@ -328,7 +356,7 @@ if EFR == 1:
 
         # Update previous solution and source term
         u_n.assign(u_bar)
-        f_n = Expression(f.cppcode, degree = 1, sigma = sigma, t = t)
+        f_n = Expression(f.cppcode, degree = R, sigma = sigma, t = t)
         f.t += tt
         f_n.t += tt
 

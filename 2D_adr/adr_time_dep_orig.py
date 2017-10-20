@@ -1,63 +1,41 @@
-# Copyright (C) 2007 Kristian B. Oelgaard
-#
-# This file is part of DOLFIN.
-#
-# DOLFIN is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# DOLFIN is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with DOLFIN. If not, see <http://www.gnu.org/licenses/>.
-#
-# Modified by Anders Logg, 2008
-# Modified by Johan Hake, 2008
-# Modified by Garth N. Wells, 2009
-#
-# This demo solves the time-dependent convection-diffusion equation by
-# a SUPG stabilized method. The velocity field used in the simulation
-# is the output from the Stokes (Taylor-Hood) demo.  The sub domains
-# for the different boundary conditions are computed by the demo
-# program in src/demo/subdomains.
-
 from dolfin import *
-import matplotlib.pyplot as plt
 
+# Parameters
+T = 2.0
+dt = 0.001
+nx = 110
 
 # Load mesh and subdomains
-mesh = UnitSquareMesh(20,20)
+mesh = UnitSquareMesh(nx,nx)
 h = CellSize(mesh)
 
 # Create FunctionSpaces
 Q = FunctionSpace(mesh, "CG", 1)
-
+R = 2
 # Create velocity Function from file
-velocity = as_vector([1.0, 1.0])
-
+velocity = as_vector([2.0, 3.0])
+t = 0
 # Initialise source function and previous solution function
-f  = Constant(1.0)
+adr_f  = Expression('(-5.09295817894065e-6*x[0]*x[1]*(x[0] - 1)*(x[1] - 1)*((4000.0*x[0] - 2000.0)*(8000.0*x[0] - 4000.0) + (4000.0*x[1] - 2000.0)*(8000.0*x[1] - 4000.0))*(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0)*sin(3.14159265358979*t) + pow(pow(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0, 2) + 1, 2)*(0.318309886183791*atan(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0) - 0.5)*(-16.0*x[0]*x[1]*(x[0] - 1)*(x[1] - 1)*sin(3.14159265358979*t) - 50.2654824574367*x[0]*x[1]*(x[0] - 1)*(x[1] - 1)*cos(3.14159265358979*t) - 48.0*x[0]*x[1]*(x[0] - 1)*sin(3.14159265358979*t) - 32.0*x[0]*x[1]*(x[1] - 1)*sin(3.14159265358979*t) - 48.0*x[0]*(x[0] - 1)*(x[1] - 1)*sin(3.14159265358979*t) + 3.2e-5*x[0]*(x[0] - 1)*sin(3.14159265358979*t) - 32.0*x[1]*(x[0] - 1)*(x[1] - 1)*sin(3.14159265358979*t) + 3.2e-5*x[1]*(x[1] - 1)*sin(3.14159265358979*t)) + (pow(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0, 2) + 1)*(-10.1859163578813*x[0]*x[1]*(x[0] - 1)*(4000.0*x[0] - 2000.0)*(x[1] - 1) - 15.278874536822*x[0]*x[1]*(x[0] - 1)*(x[1] - 1)*(4000.0*x[1] - 2000.0) + 0.0407436654315252*x[0]*x[1]*(x[0] - 1)*(x[1] - 1) + 1.01859163578813e-5*x[0]*x[1]*(x[0] - 1)*(4000.0*x[1] - 2000.0) + 1.01859163578813e-5*x[0]*x[1]*(4000.0*x[0] - 2000.0)*(x[1] - 1) + 1.01859163578813e-5*x[0]*(x[0] - 1)*(x[1] - 1)*(4000.0*x[1] - 2000.0) + 1.01859163578813e-5*x[1]*(x[0] - 1)*(4000.0*x[0] - 2000.0)*(x[1] - 1))*sin(3.14159265358979*t))/pow(pow(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0, 2) + 1, 2)', degree = R, t = t)
+f0 = Expression(adr_f.cppcode, degree = R, t = t)
+f = Expression(adr_f.cppcode, degree = R, t = t+dt)
+
 u0 = Function(Q)
 
 # Boudanry values
 u_D = Constant(0.0)
 
-# Parameters
-T = 2.0
-dt = 0.01
-t = dt
+
+
 sigma = 1.0
-mu = 0.001
+mu = 10**(-6)
 
 # Test and trial functions
 u, v = TrialFunction(Q), TestFunction(Q)
 
 # Mid-point solution
 u_mid = 0.5*(u0 + u)
+f_mid = 0.5*(f0 + f)
 
 # Residual
 r = u - u0 + dt*(- mu*div(grad(u_mid)) + dot(velocity, grad(u_mid)) + sigma*u_mid - f)
@@ -108,9 +86,11 @@ while t - T < DOLFIN_EPS:
 
     # Copy solution from previous interval
     u0 = u
+    f0.t += dt
+    f.t += dt
 
     # Save the solution to file
-    out_file << (u, t)
+    out_file << (u, float(t))
 
     # Move to next interval and adjust boundary condition
     t += dt

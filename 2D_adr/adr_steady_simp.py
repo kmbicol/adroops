@@ -10,7 +10,6 @@ import math as m
 nx = input('h=1/nx, set nx : ')
 #nx = 20
 test = 2
-
 P = 1
 
 # Create mesh
@@ -29,19 +28,20 @@ if test == 1:
 	f = Constant(1.0)
 	velocity = as_vector([1.0, 1.0]) #uniform in space velocity
 	folder = "results_steady_simp"
-	folder +="/P"+str(P)+"h1_"+str(nx)
+	folder +="/P"+str(P)+"h1_"+str(nx)+"/"
 
 elif test == 2:
 	# Iliescu Problem Parameters (t=0.5)
 	sigma = 1.0
 	mu = 10**(-6)
 	u_D = Constant(0.0)
+	# this iliescu has c = 1 (not 16sin(pi*t))
 	f = Expression('(-3.18309886183791e-7*x[0]*x[1]*(x[0] - 1)*(x[1] - 1)*((4000.0*x[0] - 2000.0)*(8000.0*x[0] - 4000.0) + (4000.0*x[1] - 2000.0)*(8000.0*x[1] - 4000.0))*(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0) + pow(pow(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0, 2) + 1, 2)*(0.318309886183791*atan(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0) - 0.5)*(-1.0*x[0]*x[1]*(x[0] - 1)*(x[1] - 1) - 3.0*x[0]*x[1]*(x[0] - 1) - 2.0*x[0]*x[1]*(x[1] - 1) - 3.0*x[0]*(x[0] - 1)*(x[1] - 1) + 2.0e-6*x[0]*(x[0] - 1) - 2.0*x[1]*(x[0] - 1)*(x[1] - 1) + 2.0e-6*x[1]*(x[1] - 1)) + (pow(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0, 2) + 1)*(-0.636619772367581*x[0]*x[1]*(x[0] - 1)*(4000.0*x[0] - 2000.0)*(x[1] - 1) - 0.954929658551372*x[0]*x[1]*(x[0] - 1)*(x[1] - 1)*(4000.0*x[1] - 2000.0) + 0.00254647908947033*x[0]*x[1]*(x[0] - 1)*(x[1] - 1) + 6.36619772367581e-7*x[0]*x[1]*(x[0] - 1)*(4000.0*x[1] - 2000.0) + 6.36619772367581e-7*x[0]*x[1]*(4000.0*x[0] - 2000.0)*(x[1] - 1) + 6.36619772367581e-7*x[0]*(x[0] - 1)*(x[1] - 1)*(4000.0*x[1] - 2000.0) + 6.36619772367581e-7*x[1]*(x[0] - 1)*(4000.0*x[0] - 2000.0)*(x[1] - 1)))/pow(pow(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0, 2) + 1, 2)', degree = 1)
 	u_exact = Expression('x[0]*x[1]*(x[0] - 1)*(x[1] - 1)*(-0.318309886183791*atan(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0) + 0.5)', degree = 1)
 
 	velocity = as_vector([2.0, 3.0]) #uniform in space velocity
-	folder = "results_steady_ilie_"
-	folder +="/P"+str(P)+"h1_"+str(nx)
+	folder = "results_steady_ilie"
+	folder +="/P"+str(P)+"h1_"+str(nx)+"/FIRST"
 
 	ue = Expression(u_exact.cppcode, degree=1)
 	uee = interpolate(ue, Q)
@@ -49,9 +49,9 @@ elif test == 2:
 	fe = Expression(f.cppcode, degree=1)
 	fee = project(fe, Q)
 
-	out_file_ue = File(folder+"/u_exact_h"+str(nx)+".pvd")
+	out_file_ue = File(folder+"u_exact_h"+str(nx)+".pvd")
 	out_file_ue << uee
-	out_file_fe = File(folder+"/f_exact_h"+str(nx)+".pvd")
+	out_file_fe = File(folder+"f_exact_h"+str(nx)+".pvd")
 	out_file_fe << fee
 
 elif test == 3: 
@@ -61,8 +61,6 @@ elif test == 3:
 	velocity = as_vector([1.0, 1.0]) #uniform in space velocity
 	b1 = velocity[0]
 	b2 = velocity[1]
-	
-	folder = "manu_"
 
 	x, y = sym.symbols('x[0], x[1]')
 
@@ -84,10 +82,11 @@ elif test == 3:
 	fe = Expression(f_code, degree=1)
 	fee = project(fe, Q)
 
-	folder +="results_steady/P"+str(P)+"h1_"+str(nx)
-	out_file_ue = File(folder+"/u_exact_h"+str(nx)+".pvd")
+	folder = "manu_"
+	folder += "results_steady/P"+str(P)+"h1_"+str(nx)+"/"
+	out_file_ue = File(folder+"u_exact_h"+str(nx)+".pvd")
 	out_file_ue << uee
-	out_file_fe = File(folder+"/f_exact_h"+str(nx)+".pvd")
+	out_file_fe = File(folder+"f_exact_h"+str(nx)+".pvd")
 	out_file_fe << fee
 
 
@@ -122,10 +121,13 @@ u_bar = Function(Q)
 
 ## Galerkin variational problem
 # No time dependence
-F = mu*dot(grad(v), grad(u))*dx + v*dot(velocity, grad(u))*dx + sigma*v*u*dx - f*v*dx
+#F = mu*dot(grad(v), grad(u))*dx + v*dot(velocity, grad(u))*dx + sigma*v*u*dx - f*v*dx
 
 # First time step (time dependent code)
-#F = mu*dot(grad(v), grad(u))*dx + v*dot(velocity, grad(u))*dx + (sigma + 1.0/dt)*v*u*dx - f*v*dx 
+dt = 0.01
+F = mu*dot(grad(v), grad(u))*dx + v*dot(velocity, grad(u))*dx + (sigma + 1.0/dt)*v*u*dx - f*v*dx 
+
+
 a = lhs(F)
 L = rhs(F)
 
@@ -135,10 +137,10 @@ vnorm = sqrt(dot(velocity, velocity))
 
 # SUPG stabilisation terms
 # Skew-Symmetric for non uniform velocity b
-ttau = h/(2.0*vnorm)
-F_SUPG = F + ttau*(0.5*div(velocity*v)+0.5*dot(velocity, grad(v)))*r*dx 
+#ttau = h/(2.0*vnorm)
+#F_SUPG = F + ttau*(0.5*div(velocity*v)+0.5*dot(velocity, grad(v)))*r*dx 
 # SS for uniform vel
-#F_SUPG = F + (h/(2.0*vnorm))*dot(velocity, grad(v))*r*dx 
+F_SUPG = F + (h/(2.0*vnorm))*dot(velocity, grad(v))*r*dx 
 a_SUPG = lhs(F_SUPG)
 L_SUPG = rhs(F_SUPG)
 
@@ -215,11 +217,11 @@ solver_VMS.solve(u_VMS.vector(), b_VMS)
 ##################################################################################
 
 # File Output
-out_file_u = File(folder+"/u_nofilter_"+"h_"+str(nx)+".pvd")
-out_file_usupg = File(folder+"/u_SUPG_"+"h_"+str(nx)+".pvd")
-out_file_ugls = File(folder+"/u_GLS_"+"h_"+str(nx)+".pvd")
-out_file_udw = File(folder+"/u_DW_"+"h_"+str(nx)+".pvd")
-out_file_uvms = File(folder+"/u_VMS_"+"h_"+str(nx)+".pvd")
+out_file_u = File(folder+"u_nofilter_"+"h_"+str(nx)+".pvd")
+out_file_usupg = File(folder+"u_SUPG_"+"h_"+str(nx)+".pvd")
+out_file_ugls = File(folder+"u_GLS_"+"h_"+str(nx)+".pvd")
+out_file_udw = File(folder+"u_DW_"+"h_"+str(nx)+".pvd")
+out_file_uvms = File(folder+"u_VMS_"+"h_"+str(nx)+".pvd")
 
 out_file_u << u
 out_file_usupg << u_SUPG
