@@ -2,9 +2,11 @@ from dolfin import *
 import math as m
 
 
-print("\n (1) SUPG \n (2) GLS \n (3) DW \n (4) VMS \n (default) Galerkin")
+print("\n (1) SUPG \n (2) GLS \n (3) DW \n (4) VMS \n (5) Galerkin and Exact Solution \n (default) Galerkin")
 method = input("Choose a stabilization method: ")
 #nx = input("h = 1/nx, let nx = ")
+
+folder = "results_full_ilie_BE/h"
 
 # Parameters
 nx = 300        # mesh size
@@ -71,24 +73,24 @@ vnorm = sqrt(dot(velocity, velocity))
 tau = h/(2.0*vnorm)
 
 ## Add stabilisation terms
-if method == 1: # SUPG
+if method == 1:     # SUPG
     F += (h/(2.0*vnorm))*dot(velocity, grad(v))*r*dx
     #F += tau*dot(velocity, grad(v))*r*dx
     methodname = "SUPG"
-elif method == 2: # GLS
+elif method == 2:   # GLS
     F += tau*(- mu*div(grad(v)) + dot(velocity, grad(v)) + sigma*v)*r*dx
     methodname = "GLS"
-elif method == 3: # DW
+elif method == 3:   # DW
     F -= tau*(- mu*div(grad(v)) - dot(velocity, grad(v)) + sigma*v)*r*dx
     methodname = "DW"
-elif method == 4: # VMS
+elif method == 4:   # VMS
     hh = 1.0/nx
     ttau = m.pow((4.0*mu/(hh*hh) + 2.0*vnorm/hh + sigma),-1)
     F -= (ttau)*(- mu*div(grad(v)) - dot(velocity, grad(v)) + sigma*v)*r*dx
     methodname = "VMS"
-else:
+else:               # Galerkin with no stabilization terms
     methodname = "Galerk"
-    # Galerkin with no stabilization terms
+
 
 
 # Create bilinear and linear forms
@@ -109,9 +111,9 @@ solver = LUSolver(A)
 solver.parameters["reuse_factorization"] = True
 
 # Output file
-out_file = File("results_full_ilie_BE/h"+str(nx)+"u_"+methodname+".pvd")
-if method == 5:
-    out_file_ue = File("results_full_ilie_BE/h"+str(nx)+"u_exact.pvd")
+out_file = File(str(nx)+"u_"+methodname+".pvd")
+if method == 5:     # Outputs Exact Solution
+    out_file_ue = File(str(nx)+"u_exact.pvd")
 
 # Set intial condition
 u = u0
