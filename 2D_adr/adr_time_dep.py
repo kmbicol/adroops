@@ -1,10 +1,22 @@
 from dolfin import *
 import math as m
 
+
 print("\n (1) SUPG \n (2) GLS \n (3) DW \n (4) VMS \n (default) Galerkin")
 method = input("Choose a stabilization method: ")
 #nx = input("h = 1/nx, let nx = ")
-nx = 300
+
+# Parameters
+nx = 300        # mesh size
+T = 2.0         # end of time interval [0, T]
+dt = 0.001      # time step size
+t = dt          # first time step
+sigma = 1.0     # reaction coefficient
+mu = 10**(-6)   # diffusivity coefficient
+R = 2           # degree of expressions
+
+# Create velocity Function from file
+velocity = as_vector([2.0, 3.0])
 
 # Load mesh and subdomains
 mesh = UnitSquareMesh(nx,nx)
@@ -13,23 +25,12 @@ h = CellSize(mesh)
 # Create FunctionSpaces
 Q = FunctionSpace(mesh, "CG", 2)
 
-# Create velocity Function from file
-velocity = as_vector([2.0, 3.0])
-
-# Initialise source function and previous solution function
+# Initialize source function and previous solution function
 #f  = Constant(1.0)
 u0 = Function(Q)
-R = 2
 
-# Boudanry values
+# Boundary values
 u_D = Constant(0.0)
-
-# Parameters
-T = 2.0
-dt = 0.001
-t = dt
-sigma = 1.0
-mu = 10**(-6)
 
 # Test and trial functions
 u, v = TrialFunction(Q), TestFunction(Q)
@@ -54,24 +55,22 @@ F = v*(u - u0)*dx + dt*(mu*dot(grad(v), grad(u_mid))*dx \
                         + sigma*v*u*dx \
                         - f_mid*v*dx)
 '''
+## Galerkin variational problem
 
 # Backward Euler
-r = u - u0 + dt*(- mu*div(grad(u)) + dot(velocity, grad(u)) + sigma*u - f)
-
-
-# Galerkin variational problem
 F = v*(u - u0)*dx + dt*(mu*dot(grad(v), grad(u))*dx \
                         + v*dot(velocity, grad(u))*dx \
                         + sigma*v*u*dx \
                         - f*v*dx)
 
-# Add stabilisation terms
 
-# residual
+
+# Residual and Stabilization Parameters
 r = u - u0 + dt*(- mu*div(grad(u)) + dot(velocity, grad(u)) + sigma*u - f)
 vnorm = sqrt(dot(velocity, velocity))
 tau = h/(2.0*vnorm)
 
+## Add stabilisation terms
 if method == 1: # SUPG
     F += (h/(2.0*vnorm))*dot(velocity, grad(v))*r*dx
     #F += tau*dot(velocity, grad(v))*r*dx
@@ -90,6 +89,7 @@ elif method == 4: # VMS
 else:
     methodname = "Galerk"
     # Galerkin with no stabilization terms
+
 
 # Create bilinear and linear forms
 a = lhs(F)
@@ -112,12 +112,9 @@ solver.parameters["reuse_factorization"] = True
 out_file = File("results_full_ilie_BE/h"+str(nx)+"u_"+methodname+".pvd")
 if method == 5:
     out_file_ue = File("results_full_ilie_BE/h"+str(nx)+"u_exact.pvd")
+
 # Set intial condition
 u = u0
-
-# Time-stepping, plot initial condition.
-i = 0
-
 
 # Create progress bar
 progress = Progress('Time-stepping')
@@ -136,7 +133,7 @@ while t - T < DOLFIN_EPS:
     if method == 5:
         ue = Expression(u_exact.cppcode, degree = R, t = t)
         uee = interpolate(ue, Q)
-        uee.rename('u','u')
+        uee.rename('Exact','Exact')
         out_file_ue << (uee, float(t))
         u_exact.t += dt
 
