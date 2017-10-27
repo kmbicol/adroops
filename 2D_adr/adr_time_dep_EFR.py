@@ -2,13 +2,15 @@ from dolfin import *
 import math as m
 import numpy as np
 
-print("\n (1) SUPG \n (2) GLS \n (3) DW \n (4) VMS \n (5) Galerkin and Exact Solution \n (6) EFR \n (default) Galerkin")
-method = input("Choose a stabilization method: ")
+#print("\n (1) SUPG \n (2) GLS \n (3) DW \n (4) VMS \n (5) Galerkin and Exact Solution \n (6) EFR \n (default) Galerkin")
+#method = input("Choose a stabilization method: ")
 #nx = input("h = 1/nx, let nx = ")
+
+method = 6
 
 # Simulation Parameters
 nx = 300        # mesh size
-T = 0.3         # end of time interval [0, T]
+T = 2.0         # end of time interval [0, T]
 dt = 0.001      # time step size
 t = dt          # first time step
 sigma = 1.0     # reaction coefficient
@@ -84,6 +86,7 @@ vnorm = sqrt(dot(velocity, velocity))
 tau = h/(2.0*vnorm)
 
 ## Add stabilisation terms
+'''
 if method == 1:     # SUPG
     F += (h/(2.0*vnorm))*dot(velocity, grad(v))*r*dx
     #F += tau*dot(velocity, grad(v))*r*dx
@@ -110,6 +113,15 @@ elif method == 6:   # EFR
 
 else:               # Galerkin with no stabilization terms
     methodname = "Galerk"
+'''
+
+methodname = "EFR"
+#S = input("Set [S]cale of filtering radius delta (delta = S*mesh_size) ")
+S = 1
+delta = S*1.0/nx
+
+u_tilde = Function(Q)
+u_bar = Function(Q)
 
 # Create bilinear and linear forms
 a = lhs(F)
@@ -234,8 +246,8 @@ else: # EFR Method
 
         # Save solution to file (VTK)
         if n % saveTimesteps == 0:
-            out_file << (u_, float(t))
-            out_file_utilde << (u_tilde, float(t))
+            #out_file << (u_, float(t))
+            #out_file_utilde << (u_tilde, float(t))
             out_file_ubar << (u_bar, float(t))
 
         # Update previous solution and source term
