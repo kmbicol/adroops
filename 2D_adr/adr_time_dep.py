@@ -7,7 +7,7 @@ import numpy as np
 #nx = input("h = 1/nx, let nx = ")
 
 # Simulation Parameters
-method = 6
+method = 1
 nx = 300
 T = 0.520 #2.0
 dt = 0.001
