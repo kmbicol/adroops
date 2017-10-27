@@ -2,19 +2,20 @@ from dolfin import *
 import math as m
 import numpy as np
 
-print("\n (1) SUPG \n (2) GLS \n (3) DW \n (4) VMS \n (5) Galerkin and Exact Solution \n (6) EFR \n (default) Galerkin")
-method = input("Choose a stabilization method: ")
+#print("\n (1) SUPG \n (2) GLS \n (3) DW \n (4) VMS \n (5) Galerkin and Exact Solution \n (6) EFR \n (default) Galerkin")
+#method = input("Choose a stabilization method: ")
 #nx = input("h = 1/nx, let nx = ")
 
 # Simulation Parameters
-nx = 200        # mesh size
-T = 2.0         # end of time interval [0, T]
-dt = 0.001      # time step size
-t = dt          # first time step
-sigma = 1.0     # reaction coefficient
-mu = 10**(-6)   # diffusivity coefficient
-R = 2           # degree of expressions
-P = 2           # degree of Finite Elements
+method = 6
+nx = 300
+T = 0.520 #2.0
+dt = 0.001
+t = dt
+sigma = 1.0
+mu = 10**(-6)
+R = 2
+P = 2
 saveTimesteps = 5 # save every __ time steps
 folder = "results_full_ilie_BE/h"+str(nx)
 
@@ -28,14 +29,14 @@ h = CellSize(mesh)
 # Create FunctionSpaces
 Q = FunctionSpace(mesh, "CG", P)
 
+
 # Boundary values
 u_D = Constant(0.0)
 
-# Initialize source function and previous solution function
+# Initialise source function and previous solution function
 
 #f  = Constant(1.0)
 u_n = Function(Q)
-u_n = interpolate(u_D, Q)
 
 # Test and trial functions
 u, v = TrialFunction(Q), TestFunction(Q)
@@ -64,13 +65,15 @@ F = v*(u - u_n)*dx + dt*(mu*dot(grad(v), grad(u_mid))*dx \
 '''
 
 
+
+
 # Set up boundary condition
 def boundary(x, on_boundary):
     return on_boundary
 bc = DirichletBC(Q, u_D, boundary)
 
 
-## Galerkin variational problem
+# Galerkin variational problem
 
 # Backward Euler
 F = v*(u - u_n)*dx + dt*(mu*dot(grad(v), grad(u))*dx \
@@ -83,18 +86,17 @@ r = u - u_n + dt*(- mu*div(grad(u)) + dot(velocity, grad(u)) + sigma*u - f)
 vnorm = sqrt(dot(velocity, velocity))
 tau = h/(2.0*vnorm)
 
-## Add stabilisation terms
-if method == 1:     # SUPG
+if method == 1: # SUPG
     F += (h/(2.0*vnorm))*dot(velocity, grad(v))*r*dx
     #F += tau*dot(velocity, grad(v))*r*dx
     methodname = "SUPG"
-elif method == 2:   # GLS
+elif method == 2: # GLS
     F += tau*(- mu*div(grad(v)) + dot(velocity, grad(v)) + sigma*v)*r*dx
     methodname = "GLS"
-elif method == 3:   # DW
+elif method == 3: # DW
     F -= tau*(- mu*div(grad(v)) - dot(velocity, grad(v)) + sigma*v)*r*dx
     methodname = "DW"
-elif method == 4:   # VMS
+elif method == 4: # VMS
     hh = 1.0/nx
     ttau = m.pow((4.0*mu/(hh*hh) + 2.0*vnorm/hh + sigma),-1)
     F -= (ttau)*(- mu*div(grad(v)) - dot(velocity, grad(v)) + sigma*v)*r*dx
@@ -107,42 +109,47 @@ elif method == 6:   # EFR
 
     u_tilde = Function(Q)
     u_bar = Function(Q)
-
-else:               # Galerkin with no stabilization terms
+else:
     methodname = "Galerk"
+    # Galerkin with no stabilization terms
 
 # Create bilinear and linear forms
 a = lhs(F)
 L = rhs(F)
 
+
+
 # Assemble matrix
 A = assemble(a)
 bc.apply(A)
 
+# Create linear solver and factorize matrix
+solver = LUSolver(A)
+solver.parameters["reuse_factorization"] = True
+
 # Output file
 out_file = File(folder+"u_"+methodname+".pvd")
-if method == 5:     # Outputs Exact Solution
+if method == 5:
     out_file_ue = File(folder+"u_exact.pvd")
+# Set intial condition
+u = u_n
+
+# Time-stepping, plot initial condition.
+i = 0
+
 
 # Create progress bar
 progress = Progress('Time-stepping')
 set_log_level(PROGRESS)
 
-
-num_steps = int(round(T / dt, 0)) 
-
-if method != 6: # All Other Stabilization Methods
-
-    # Create linear solver and factorize matrix
-    solver = LUSolver(A)
-    solver.parameters["reuse_factorization"] = True
-    for n in range(num_steps):
+if method != 6:
+    while t - T < DOLFIN_EPS:
         # Assemble vector and apply boundary conditions
         b = assemble(L)
         bc.apply(b)
 
         # Solve the linear system (re-use the already factorized matrix A)
-        solver.solve(u_.vector(), b)
+        solver.solve(u.vector(), b)
 
         # Exact solution in time
         if method == 5:
@@ -153,18 +160,20 @@ if method != 6: # All Other Stabilization Methods
             u_exact.t += dt
 
         # Copy solution from previous interval
-        u_n = u_
+        u_n = u
         f0.t += dt
         f.t += dt
 
         # Save the solution to file
-        out_file << (u_, t)
+        out_file << (u, t)
 
         # Move to next interval and adjust boundary condition
         t += dt
+        i += 1
 
         # Update progress bar
         progress.update(t / T)
+
 
 else: # EFR Method
     # Define indicator function to evaluate current time step
@@ -210,7 +219,7 @@ else: # EFR Method
     out_file_ubar = File(folder+"ubar_EFR.pvd")      # filtered solution
 
     # Time-stepping
-    for n in range(num_steps):
+    while t - T < DOLFIN_EPS:
         # Update current time
         t += dt
 
