@@ -2,13 +2,13 @@ from dolfin import *
 import math as m
 import numpy as np
 
-print("\n (6) EFR ")
+print("\n (1) SUPG \n (2) GLS \n (3) DW \n (4) VMS \n (5) Galerkin and Exact Solution \n (6) EFR \n (default) Galerkin")
 method = input("Choose a stabilization method: ")
 #nx = input("h = 1/nx, let nx = ")
 
 # Simulation Parameters
 nx = 300        # mesh size
-T = 0.520#2.0         # end of time interval [0, T]
+T = 0.3         # end of time interval [0, T]
 dt = 0.001      # time step size
 t = dt          # first time step
 sigma = 1.0     # reaction coefficient
@@ -35,7 +35,7 @@ u_D = Constant(0.0)
 
 #f  = Constant(1.0)
 u_n = Function(Q)
-#u_n = interpolate(u_D, Q)
+u_n = interpolate(u_D, Q)
 
 # Test and trial functions
 u, v = TrialFunction(Q), TestFunction(Q)
@@ -128,17 +128,14 @@ if method == 5:     # Outputs Exact Solution
 progress = Progress('Time-stepping')
 set_log_level(PROGRESS)
 
-# Create linear solver and factorize matrix
-solver = LUSolver(A)
-solver.parameters["reuse_factorization"] = True
-# Set intial condition
-u = u_n
 
 num_steps = int(round(T / dt, 0)) 
 
 if method != 6: # All Other Stabilization Methods
 
-
+    # Create linear solver and factorize matrix
+    solver = LUSolver(A)
+    solver.parameters["reuse_factorization"] = True
     for n in range(num_steps):
         # Assemble vector and apply boundary conditions
         b = assemble(L)
