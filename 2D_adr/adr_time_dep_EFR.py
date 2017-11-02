@@ -10,7 +10,7 @@ method = 6
 
 # Simulation Parameters
 nx = 300        # mesh size
-T = 2.0         # end of time interval [0, T]
+T = 0.5        # end of time interval [0, T]
 dt = 0.001      # time step size
 t = dt          # first time step
 sigma = 1.0     # reaction coefficient
@@ -128,8 +128,12 @@ a = lhs(F)
 L = rhs(F)
 
 # Assemble matrix
+
+start1 = time.time()
+print("Started assemble")
 A = assemble(a)
 bc.apply(A)
+print("Finished assemble in %f seconds"%(time.time()-start1))
 
 # Output file
 out_file = File(folder+"u_"+methodname+".pvd")
@@ -144,7 +148,8 @@ set_log_level(PROGRESS)
 num_steps = int(round(T / dt, 0)) 
 
 if method != 6: # All Other Stabilization Methods
-
+	print('This is only works for EFR! Enter option 6.')
+'''
     # Create linear solver and factorize matrix
     solver = LUSolver(A)
     solver.parameters["reuse_factorization"] = True
@@ -177,7 +182,7 @@ if method != 6: # All Other Stabilization Methods
 
         # Update progress bar
         progress.update(t / T)
-
+'''
 else: # EFR Method
     # Define indicator function to evaluate current time step
     def a(u_tilde, u_, t):
@@ -209,8 +214,11 @@ else: # EFR Method
     L3 = v*u_*dx
 
     # Assemble matrices
-    A2 = assemble(a2)
 
+	start2 = time.time()
+	print("Started assemble2")
+    A2 = assemble(a2)
+	print("Finished assemble2 in %f seconds"%(time.time()-start2))
 
     # Apply boundary conditions to matrices
     bc.apply(A2)
