@@ -1,7 +1,7 @@
 from dolfin import *
 import math as m
 import numpy as np
-
+import time
 #print("\n (1) SUPG \n (2) GLS \n (3) DW \n (4) VMS \n (5) Galerkin and Exact Solution \n (6) EFR \n (default) Galerkin")
 #method = input("Choose a stabilization method: ")
 #nx = input("h = 1/nx, let nx = ")
@@ -79,14 +79,14 @@ F = v*(u - u_n)*dx + dt*(mu*dot(grad(v), grad(u))*dx \
                         + v*dot(velocity, grad(u))*dx \
                         + sigma*v*u*dx \
                         - f*v*dx)
-
+'''
 # Residual and Stabilization Parameters
 r = u - u_n + dt*(- mu*div(grad(u)) + dot(velocity, grad(u)) + sigma*u - f)
 vnorm = sqrt(dot(velocity, velocity))
 tau = h/(2.0*vnorm)
 
 ## Add stabilisation terms
-'''
+
 if method == 1:     # SUPG
     F += (h/(2.0*vnorm))*dot(velocity, grad(v))*r*dx
     #F += tau*dot(velocity, grad(v))*r*dx
@@ -147,8 +147,8 @@ set_log_level(PROGRESS)
 
 num_steps = int(round(T / dt, 0)) 
 
-if method != 6: # All Other Stabilization Methods
-	print('This is only works for EFR! Enter option 6.')
+#if method != 6: # All Other Stabilization Methods
+#	print('This is only works for EFR! Enter option 6.')
 '''
     # Create linear solver and factorize matrix
     solver = LUSolver(A)
@@ -183,86 +183,95 @@ if method != 6: # All Other Stabilization Methods
         # Update progress bar
         progress.update(t / T)
 '''
-else: # EFR Method
-    # Define indicator function to evaluate current time step
-    def a(u_tilde, u_, t):
-        indicator = Expression('sqrt((a-b)*(a-b))', degree = 2, a = u_, b = u_tilde)
-        indicator = interpolate(indicator, Q)
-        max_ind = np.amax(indicator.vector().array())
+#else: # EFR Method
+# Define indicator function to evaluate current time step
+def a(u_tilde, u_, t):
+    indicator = Expression('sqrt((a-b)*(a-b))', degree = 2, a = u_, b = u_tilde)
+    indicator = interpolate(indicator, Q)
+    max_ind = np.amax(indicator.vector().array())
 
-        # Normalize indicator such that it's between [0,1].
-        if max_ind < 1:
-           max_ind = 1.0
+    # Normalize indicator such that it's between [0,1].
+    if max_ind < 1:
+       max_ind = 1.0
 
-        indicator = Expression('a/b', degree = 2, a = indicator, b = max_ind)
-        indicator = interpolate(indicator, Q) 
-        indicator.rename('a','a')
-        out_file_ind << (indicator, float(t))
-        return indicator
+    indicator = Expression('a/b', degree = 2, a = indicator, b = max_ind)
+    indicator = interpolate(indicator, Q) 
+    indicator.rename('a','a')
+    out_file_ind << (indicator, float(t))
+    return indicator
 
-    t = 0
-    ## EFR Stabilization Method
+t = 0
+## EFR Stabilization Method
 
-    # Define variational problem for step 2a (apply Helmholz filter)
-    a2 = v*u*dx + delta*delta*dot(grad(v), grad(u))*dx #lhs(F_Hfilter)
-    L2 = v*u_*dx #rhs(F_Hfilter)
+# Define variational problem for step 2a (apply Helmholz filter)
+a2 = v*u*dx + delta*delta*dot(grad(v), grad(u))*dx #lhs(F_Hfilter)
+L2 = v*u_*dx #rhs(F_Hfilter)
 
-    # Define variational problem for step 2b (evaluate indicator and find filtered solution)
-    def a3(ind):
-        a3 = v*u*dx + delta*delta*dot(grad(v), ind*grad(u))*dx
-        return a3
-    L3 = v*u_*dx
+# Define variational problem for step 2b (evaluate indicator and find filtered solution)
+def a3(ind):
+    a3 = v*u*dx + delta*delta*dot(grad(v), ind*grad(u))*dx
+    return a3
+L3 = v*u_*dx
 
-    # Assemble matrices
+# Assemble matrices
 
-	start2 = time.time()
-	print("Started assemble2")
-    A2 = assemble(a2)
-	print("Finished assemble2 in %f seconds"%(time.time()-start2))
+start2 = time.time()
+print("Started assemble2")
+A2 = assemble(a2)
+print("Finished assemble2 in %f seconds"%(time.time()-start2))
 
-    # Apply boundary conditions to matrices
-    bc.apply(A2)
+# Apply boundary conditions to matrices
+bc.apply(A2)
 
 
-    # Create VTK files for visualization output
-    out_file_utilde = File(folder+"utilde_EFR.pvd")  # u tilde
-    out_file_ind = File(folder+"a_EFR.pvd")          # indicator function
-    out_file_ubar = File(folder+"ubar_EFR.pvd")      # filtered solution
+# Create VTK files for visualization output
+out_file_utilde = File(folder+"utilde_EFR.pvd")  # u tilde
+out_file_ind = File(folder+"a_EFR.pvd")          # indicator function
+out_file_ubar = File(folder+"ubar_EFR.pvd")      # filtered solution
 
-    # Time-stepping
-    for n in range(num_steps):
-        # Update current time
-        t += dt
+# Time-stepping
+for n in range(num_steps):
+	# Update current time
+	t += dt
 
-        # Step 1
-        b = assemble(L)
-        bc.apply(b)
-        solve(A, u_.vector(), b)
+	# Step 1
+	b = assemble(L)
+	bc.apply(b)
+	start3 = time.time()
+	print("Started solving coarse mesh problem.")
+	solve(A, u_.vector(), b)
+	print("Finished coarse solution in %f seconds"%(time.time()-start3))
 
-        # Step 2a
-        b2 = assemble(L2)
-        bc.apply(b2)
-        solve(A2, u_tilde.vector(), b2)
+	# Step 2a
+	b2 = assemble(L2)
+	bc.apply(b2)
+	start4 = time.time()
+	print("Started Helmholz filtering problem.")
+	solve(A2, u_tilde.vector(), b2)
+	print("Finished Helmholz solution in %f seconds"%(time.time()-start4))
 
-        # Step 2b
-        ind = a(u_tilde, u_, t)
-        A3 = assemble(a3(ind))
-        bc.apply(A3)
-        b3 = assemble(L3)
-        bc.apply(b3)
-        solve(A3, u_bar.vector(), b3)    
+	# Step 2b
+	start5 = time.time()
+	print("Started indicator step (ind calculation, assembly, solving).")
+	ind = a(u_tilde, u_, t)
+	A3 = assemble(a3(ind))
+	bc.apply(A3)
+	b3 = assemble(L3)
+	bc.apply(b3)
+	solve(A3, u_bar.vector(), b3)    
+	print("Finished end of step solution in %f seconds"%(time.time()-start5))
 
-        # Save solution to file (VTK)
-        if n % saveTimesteps == 0:
-            #out_file << (u_, float(t))
-            #out_file_utilde << (u_tilde, float(t))
-            out_file_ubar << (u_bar, float(t))
+	# Save solution to file (VTK)
+	if n % saveTimesteps == 0:
+	    #out_file << (u_, float(t))
+	    #out_file_utilde << (u_tilde, float(t))
+	    out_file_ubar << (u_bar, float(t))
+	    # Update progress bar
+	    progress.update(t / T)
 
-        # Update previous solution and source term
-        u_n.assign(u_bar)
-        f_n = Expression(f.cppcode, degree = R, sigma = sigma, t = t)
-        f.t += dt
-        f_n.t += dt
+	# Update previous solution and source term
+	u_n.assign(u_bar)
+	f_n = Expression(f.cppcode, degree = R, sigma = sigma, t = t)
+	f.t += dt
+	f_n.t += dt
 
-        # Update progress bar
-        progress.update(t / T)
