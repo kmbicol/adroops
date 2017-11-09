@@ -16,7 +16,7 @@ ffile.write(outputf)
 
 # Simulation Parameters
 nx = 300        # mesh size
-T = 0.003        # end of time interval [0, T]
+T = 0.010        # end of time interval [0, T]
 dt = 0.001      # time step size
 t = dt          # first time step
 sigma = 1.0     # reaction coefficient
@@ -144,6 +144,7 @@ out_file_utilde = File(folder+"utilde_EFR.pvd")  # u tilde
 out_file_ind = File(folder+"a_EFR.pvd")          # indicator function
 out_file_ubar = File(folder+"ubar_EFR.pvd")      # filtered solution
 
+
 # Time-stepping
 for n in range(num_steps):
 	# Update current time
@@ -153,14 +154,14 @@ for n in range(num_steps):
 	b = assemble(L)
 	bc.apply(b)
 	start3 = time.time()
-	solve(A, u_.vector(), b)
+	solve(A, u_.vector(), b, "gmres")
 	coarse_solve = (time.time()-start3)
 
 	# Step 2a Solve Helmholtz filter
 	b2 = assemble(L2)
 	bc.apply(b2)
 	start4 = time.time()
-	solve(A2, u_tilde.vector(), b2)
+	solve(A2, u_tilde.vector(), b2, "cg")
 	helmholtz_solve = time.time()-start4
 
 	# Step 2b Calculate Indicator and solve Ind Problem

@@ -9,14 +9,14 @@ method = input("Choose a stabilization method: ")
 #method = 1
 
 # Simulation Parameters
-nx = 300
+nx = 100
 T = 0.520 #2.0
 dt = 0.001
 t = dt
 R = 2
 P = 2
 saveTimesteps = 5 # save every __ time steps
-folder = "results_nonunifb_BE/h"+str(nx)
+folder = "results_timedepb_BE/h"+str(nx)
 
 
 # Load mesh and subdomains
@@ -50,23 +50,27 @@ adr_f = Expression('(-5.09295817894065e-6*x[0]*x[1]*(x[0] - 1)*(x[1] - 1)*((4000
 # Non-uniform convective velocity
 sigma = 1.0       # reaction coefficient
 mu = 0.001        # diffision coefficient
+
+''' Saw no differences among the methods
 velocity = Expression(('cos(t)', 'sin(t)') , degree=2, t=t)
 u_exact = Expression(' pow(x[0], 2) + pow(x[1], 2) ', degree=R, t=t)
+adr_f = Expression(' 1.0*pow(x[0], 2) + 2*x[0]*cos(t) + 1.0*pow(x[1], 2) + 2*x[1]*sin(t) - 0.004 ', degree=R, t=t)
+'''
+velocity = Expression((' (x[0] - 0.5)*cos(t) ',' (x[1] - 0.5)*sin(t) '), degree=R, t=t)
+u_exact = Expression(' pow(x[0], 2) + pow(x[1], 2) ', degree=R, t=t)
+adr_f = Expression(' 1.0*pow(x[0], 2) + 2*x[0]*(x[0] - 0.5)*cos(t) + 1.0*pow(x[1], 2) + 2*x[1]*(x[1] - 0.5)*sin(t) - 0.004 ', degree=R, t=t)
+
+
+
+
+# --------- don't modify below this ---- #
+
 u_D = Expression(u_exact.cppcode, degree=R, t=0)
 #u_D = interpolate(u_D,Q)
-
-adr_f = Expression(' 1.0*pow(x[0], 2) + 2*x[0]*cos(t) + 1.0*pow(x[1], 2) + 2*x[1]*sin(t) - 0.004 ', degree=R, t=t)
-
-
-
 
 
 f = Expression(adr_f.cppcode, degree = R, t = t)
 f0 = Expression(adr_f.cppcode, degree = R, t = 0)
-
-
-
-
 
 
 '''
@@ -189,6 +193,7 @@ if method != 6:
         f0.t += dt
         f.t += dt
         u_D.t += dt
+        velocity.t +=dt
 
         # Save the solution to file
         # Save solution to file (VTK)
