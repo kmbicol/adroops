@@ -8,9 +8,15 @@ import time
 
 method = 6
 
+compfile="EFR_comptime_CGhelmholtz.txt"
+
+ffile=open(compfile,"a+")
+outputf = "t,coarse_assemble,helmholtz_assemble,coarse_solve,helmholtz_solve,ind_calc,ind_assemble,ind_solve \n"
+ffile.write(outputf)
+
 # Simulation Parameters
 nx = 300        # mesh size
-T = 0.5        # end of time interval [0, T]
+T = 0.003        # end of time interval [0, T]
 dt = 0.001      # time step size
 t = dt          # first time step
 sigma = 1.0     # reaction coefficient
@@ -48,23 +54,6 @@ adr_f = Expression('(-5.09295817894065e-6*x[0]*x[1]*(x[0] - 1)*(x[1] - 1)*((4000
 
 f = Expression(adr_f.cppcode, degree = R, t = t)
 f0 = Expression(adr_f.cppcode, degree = R, t = 0)
-'''
-# Mid-point solution
-u_mid = 0.5*(u_n + u)
-f_mid = 0.5*(f0 + f)
-
-
-# Residual
-r = u - u_n + dt*(- mu*div(grad(u_mid)) + dot(velocity, grad(u_mid)) + sigma*u_mid - f_mid)
-
-
-# Galerkin variational problem
-F = v*(u - u_n)*dx + dt*(mu*dot(grad(v), grad(u_mid))*dx \
-                        + v*dot(velocity, grad(u_mid))*dx \
-                        + sigma*v*u*dx \
-                        - f_mid*v*dx)
-'''
-
 
 # Set up boundary condition
 def boundary(x, on_boundary):
@@ -79,41 +68,6 @@ F = v*(u - u_n)*dx + dt*(mu*dot(grad(v), grad(u))*dx \
                         + v*dot(velocity, grad(u))*dx \
                         + sigma*v*u*dx \
                         - f*v*dx)
-'''
-# Residual and Stabilization Parameters
-r = u - u_n + dt*(- mu*div(grad(u)) + dot(velocity, grad(u)) + sigma*u - f)
-vnorm = sqrt(dot(velocity, velocity))
-tau = h/(2.0*vnorm)
-
-## Add stabilisation terms
-
-if method == 1:     # SUPG
-    F += (h/(2.0*vnorm))*dot(velocity, grad(v))*r*dx
-    #F += tau*dot(velocity, grad(v))*r*dx
-    methodname = "SUPG"
-elif method == 2:   # GLS
-    F += tau*(- mu*div(grad(v)) + dot(velocity, grad(v)) + sigma*v)*r*dx
-    methodname = "GLS"
-elif method == 3:   # DW
-    F -= tau*(- mu*div(grad(v)) - dot(velocity, grad(v)) + sigma*v)*r*dx
-    methodname = "DW"
-elif method == 4:   # VMS
-    hh = 1.0/nx
-    ttau = m.pow((4.0*mu/(hh*hh) + 2.0*vnorm/hh + sigma),-1)
-    F -= (ttau)*(- mu*div(grad(v)) - dot(velocity, grad(v)) + sigma*v)*r*dx
-    methodname = "VMS"
-elif method == 6:   # EFR
-    methodname = "EFR"
-    #S = input("Set [S]cale of filtering radius delta (delta = S*mesh_size) ")
-    S = 1
-    delta = S*1.0/nx
-
-    u_tilde = Function(Q)
-    u_bar = Function(Q)
-
-else:               # Galerkin with no stabilization terms
-    methodname = "Galerk"
-'''
 
 methodname = "EFR"
 #S = input("Set [S]cale of filtering radius delta (delta = S*mesh_size) ")
@@ -130,10 +84,10 @@ L = rhs(F)
 # Assemble matrix
 
 start1 = time.time()
-print("Started assemble")
+#print("Started assemble")
 A = assemble(a)
 bc.apply(A)
-print("Finished assemble in %f seconds"%(time.time()-start1))
+coarse_assemble = time.time()-start1
 
 # Output file
 out_file = File(folder+"u_"+methodname+".pvd")
@@ -147,43 +101,6 @@ set_log_level(PROGRESS)
 
 num_steps = int(round(T / dt, 0)) 
 
-#if method != 6: # All Other Stabilization Methods
-#	print('This is only works for EFR! Enter option 6.')
-'''
-    # Create linear solver and factorize matrix
-    solver = LUSolver(A)
-    solver.parameters["reuse_factorization"] = True
-    for n in range(num_steps):
-        # Assemble vector and apply boundary conditions
-        b = assemble(L)
-        bc.apply(b)
-
-        # Solve the linear system (re-use the already factorized matrix A)
-        solver.solve(u_.vector(), b)
-
-        # Exact solution in time
-        if method == 5:
-            ue = Expression(u_exact.cppcode, degree = R, t = t)
-            uee = interpolate(ue, Q)
-            uee.rename('Exact','Exact')
-            out_file_ue << (uee, float(t))
-            u_exact.t += dt
-
-        # Copy solution from previous interval
-        u_n = u_
-        f0.t += dt
-        f.t += dt
-
-        # Save the solution to file
-        out_file << (u_, t)
-
-        # Move to next interval and adjust boundary condition
-        t += dt
-
-        # Update progress bar
-        progress.update(t / T)
-'''
-#else: # EFR Method
 # Define indicator function to evaluate current time step
 def a(u_tilde, u_, t):
     indicator = Expression('sqrt((a-b)*(a-b))', degree = 2, a = u_, b = u_tilde)
@@ -216,12 +133,10 @@ L3 = v*u_*dx
 # Assemble matrices
 
 start2 = time.time()
-print("Started assemble2")
+#print("Started assemble2")
 A2 = assemble(a2)
-print("Finished assemble2 in %f seconds"%(time.time()-start2))
-
-# Apply boundary conditions to matrices
 bc.apply(A2)
+helmholtz_assemble = time.time()-start2
 
 
 # Create VTK files for visualization output
@@ -234,32 +149,36 @@ for n in range(num_steps):
 	# Update current time
 	t += dt
 
-	# Step 1
+	# Step 1 Solve on Coarse Grid
 	b = assemble(L)
 	bc.apply(b)
 	start3 = time.time()
-	print("Started solving coarse mesh problem.")
 	solve(A, u_.vector(), b)
-	print("Finished coarse solution in %f seconds"%(time.time()-start3))
+	coarse_solve = (time.time()-start3)
 
-	# Step 2a
+	# Step 2a Solve Helmholtz filter
 	b2 = assemble(L2)
 	bc.apply(b2)
 	start4 = time.time()
-	print("Started Helmholz filtering problem.")
 	solve(A2, u_tilde.vector(), b2)
-	print("Finished Helmholz solution in %f seconds"%(time.time()-start4))
+	helmholtz_solve = time.time()-start4
 
-	# Step 2b
+	# Step 2b Calculate Indicator and solve Ind Problem
 	start5 = time.time()
-	print("Started indicator step (ind calculation, assembly, solving).")
 	ind = a(u_tilde, u_, t)
+	ind_calc = (time.time()-start5)
+
+	start6 = time.time()
 	A3 = assemble(a3(ind))
 	bc.apply(A3)
+	ind_assemble = time.time()-start6
+
 	b3 = assemble(L3)
 	bc.apply(b3)
+
+	start7 = time.time()
 	solve(A3, u_bar.vector(), b3)    
-	print("Finished end of step solution in %f seconds"%(time.time()-start5))
+	ind_solve = (time.time()-start7)
 
 	# Save solution to file (VTK)
 	if n % saveTimesteps == 0:
@@ -271,7 +190,18 @@ for n in range(num_steps):
 
 	# Update previous solution and source term
 	u_n.assign(u_bar)
-	f_n = Expression(f.cppcode, degree = R, sigma = sigma, t = t)
+	f_n = Expression(adr_f.cppcode, degree = R, sigma = sigma, t = t)
 	f.t += dt
 	f_n.t += dt
 
+	outputf = str(t)+','+str(coarse_assemble)+','+ \
+	str(helmholtz_assemble)+','+ \
+	str(coarse_solve)+','+ \
+	str(helmholtz_solve)+','+ \
+	str(ind_calc)+','+ \
+	str(ind_assemble)+','+ \
+	str(ind_solve)+'\n'
+
+	# Computational Time Outputs
+	ffile=open(compfile,"a+")
+	ffile.write(outputf)
