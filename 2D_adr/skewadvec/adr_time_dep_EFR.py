@@ -12,14 +12,17 @@ Theta = m.pi/6 # 30 degrees like in Tayfun 2003 paper
 aTheta = '30deg'
 
 # Simulation Parameters
-nx = 20
-T = 5 #2.0
-dt = .1
+
+nx = 100
+dt = 2.0*(1.0/nx)
+
+T = 2.0
+
 t = dt - dt
 R = 2
 P = 2
 saveTimesteps = 1 # save every __ time steps
-folder = "results_skewadv/theta"+aTheta+"h"+str(nx)
+folder = "1results_skewadv/theta"+aTheta+"h"+str(nx)
 
 savetimes = 0
 if savetimes != 0:

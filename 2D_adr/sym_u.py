@@ -3,9 +3,10 @@ from fenics import *
 import sympy as sym
 
 ## About: Uses SymPy to compute f from the manufactured solution u
-x, y, t = sym.symbols('x[0], x[1], t')
 
 '''
+x, y, t = sym.symbols('x[0], x[1], t')
+
 ## Illiescu Ex 4.1 Test Function Parameters 
 
 mu = 10**-6
@@ -44,6 +45,8 @@ as_vector([1.0, 1.0])			# constant
 ('x[1]-x[0]', '-x[0]-x[1]')		# spiral inward
 '''
 
+
+'''
 sigma = 1.0       # reaction coefficient
 mu = 0.001        # diffision coefficient
 
@@ -72,6 +75,10 @@ print('u_exact = Expression(\'', u_code,'\', degree=R, t=t)')
 print('adr_f = Expression(\'', f_code,'\', degree=R, t=t)')
 
 '''
+
+
+
+'''
 ## Code for Exact Solution Output
 
 ue = Expression(u_code, degree=1)
@@ -84,4 +91,27 @@ out_file_ue = File(folder+"/u_exact_h"+str(nx)+".pvd")
 out_file_ue << uee
 out_file_fe = File(folder+"/f_exact_h"+str(nx)+".pvd")
 out_file_fe << fee
+'''
+
+class deconv():
+	def order(self):
+		uptoN = raw_input('Up to what order N are you testing? ')
+		utilde = { "N" + str(i) : self.do_something(i) for i in range(int(uptoN)+1) }
+
+		keys = utilde.keys()
+		keys.sort()
+		for x in keys:
+		    print(x, '=', utilde[x])
+
+
+
+	def do_something(self, i):
+		return "something " + str(i)
+
+deconv().order()
+
+
+'''
+
+
 '''
