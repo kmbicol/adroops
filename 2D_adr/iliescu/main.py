@@ -5,6 +5,7 @@ import time
 
 # Load mesh and subdomains
 method = input("0: No Filter, 1: SUPG, 2: EFR; method = ")
+
 if method == 2:
 	N = input("N = 0 or 1, N = ")
 nx = input("h = 1/nx, let nx = ")
