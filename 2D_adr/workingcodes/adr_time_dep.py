@@ -1,3 +1,8 @@
+# Advection-Diffusion (sigma = 0)
+# Code contains the following stabilizations:
+#     SUPG, GLS, DW, VMS
+#     No Stabilization (Galerkin) also included
+
 from dolfin import *
 import math as m
 import numpy as np

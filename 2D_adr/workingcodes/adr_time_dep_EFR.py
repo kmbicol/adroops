@@ -1,3 +1,7 @@
+# Advection-Diffusion (sigma = 0)
+# Code contains the following stabilizations:
+#     EFR
+
 from dolfin import *
 import math as m
 import numpy as np
