@@ -12,8 +12,9 @@ if method == 2:
 nx = input("h = 1/nx, let nx = ")
 '''
 
+method = 2
 
-for method in [0,1]:
+for N in [0,1,2,3]:
 	for nx in [100,200,300]:
 		dt = 0.01
 
