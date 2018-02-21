@@ -4,40 +4,24 @@ import numpy as np
 import time
 
 # Load mesh and subdomains
+'''
+method = input("0: No Filter, 1: SUPG, 2: EFR; method = ")
 
-#method = input("0: No Filter, 1: SUPG, 2: EFR; method = ")
+if method == 2:
+	N = input("N = 0 or 1, N = ")
+nx = input("h = 1/nx, let nx = ")
+'''
 
 method = 2
-#if method == 2:
-#	N = input("N = ")
-#nx = 500#input("h = 1/nx, let nx = ")
 
-Scale = 1
-saveTimesteps = 1 # by magnitudes of 10 so that it lines up with dt=0.01
-
-
-
-for nx in [250,500]:
-	# Output files directory
-	folder = "dt01/h"+str(nx)+"_"
-	for N in [2,3]:
-
-		if Scale == 1:
-			S = 1.0
-		elif Scale == 2:
-			S = m.sqrt(2)
-		elif Scale == 3:
-			S = 2.0
-		else:
-			S = 5.0
-
-
-		dt = 0.01/saveTimesteps
+for N in [0,1,2,3]:
+	for nx in [100,200,300]:
+		dt = 0.01
 
 		T = 0.64
 		t = dt - dt
 
-		#S = 1.0  # filtering radius factor
+		S = 1.0  # filtering radius factor
 		P = 2    # polynomial degree of FE
 		R = 2
 
@@ -63,7 +47,9 @@ for nx in [250,500]:
 		bc = DirichletBC(Q, u_D, boundary)
 
 
+		# Output files directory
 
+		folder = "results/h"+str(nx)+"_"
 
 
 		# Don't Modify Below This! -----------#
@@ -82,9 +68,6 @@ for nx in [250,500]:
 
 		if method == 0:
 			methodname = "nofilter"
-			out_file_ue = File(folder+"u_exact.pvd")
-			u_exact = Expression(' 16*(-0.318309886183791*x[0]*x[1]*(-x[0] + 1)*(-x[1] + 1)*atan(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0) + 0.5*x[0]*x[1]*(-x[0] + 1)*(-x[1] + 1))*sin(3.14159265358979*t) ', degree=R, t=t)
-
 
 		if method == 1:
 			methodname = "SUPG"
@@ -161,21 +144,11 @@ for nx in [250,500]:
 		if method == 1 or method == 0:
 			out_file_ubar = File(folder+"u_"+methodname+".pvd")      # filtered solution
 			for n in range(num_steps):
-				if method == 1:
-					u_bar.rename('SUPG','SUPG')
-				else:
-					u_bar.rename('No Filter','No Filter')
+				u_bar.rename('u','u')
 				b = assemble(L)
 				bc.apply(b)
 				solve(A1, u_bar.vector(), b, "gmres")
-
-				ue = Expression(u_exact.cppcode, degree = R, t = t)
-				uee = interpolate(ue, Q)
-				uee.rename('Exact','Exact')
-				out_file_ue << (uee, float(t))
-
-				if n % saveTimesteps == 0:
-					out_file_ubar << (u_bar, float(t))
+				out_file_ubar << (u_bar, float(t))
 
 				# Update previous solution and source term
 				u_n.assign(u_bar)
@@ -184,18 +157,15 @@ for nx in [250,500]:
 				t += dt
 				f.t += dt
 				f_n.t += dt
-				u_exact.t += dt
-
 
 
 		else:
-			folder += "S"+str(Scale)
 			out_file_utilde = File(folder+"utilde_N"+str(N)+"_EFR.pvd")  # u tilde
 			out_file_ind = File(folder+"a_N"+str(N)+"_EFR.pvd")          # indicator function
 			out_file_ubar = File(folder+"ubar_N"+str(N)+"_EFR.pvd")      # filtered solution
 
 			for n in range(num_steps):
-				u_bar.rename('N='+str(N),'N='+str(N))
+				u_bar.rename('u','u')
 				# Step 1 Solve on Coarse Grid
 				b = assemble(L)
 				bc.apply(b)
@@ -233,7 +203,7 @@ for nx in [250,500]:
 					bc_2.apply(b2_2)
 					bc_2.apply(A2)
 					solve(A2, u_tilde2.vector(), b2_2, "cg")
-					DF = Expression('3*a-3*b+c', degree = R, a=u_tilde0, b=u_tilde1, c=u_tilde2)
+					DF = Expression('3*a-3*b-c', degree = R, a=u_tilde0, b=u_tilde1, c=u_tilde2)
 				elif N == 3: # N == 3:
 					b2_0 = assemble(L2(u_))
 					bc_0 = DirichletBC(Q, u_, boundary)
@@ -279,8 +249,8 @@ for nx in [250,500]:
 				out_file_ind << (ind, float(t))
 
 				progress.update(t / T)
-				if n % saveTimesteps == 0:
-					out_file_ubar << (u_bar, float(t))
+
+				out_file_ubar << (u_bar, float(t))
 
 				# Update previous solution and source term
 				u_n.assign(u_bar)

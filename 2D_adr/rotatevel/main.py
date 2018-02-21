@@ -3,53 +3,41 @@ import math as m
 import numpy as np
 import time
 
-# Load mesh and subdomains
+#method = input("method: (0) no filter (1) supg (2) efr")		# 0: no filter, 1: supg, 2: efr
+#nx = input("h = 1/nx, let nx = ")
+for method in [0,1]:
+	for nx in [750]:
 
-#method = input("0: No Filter, 1: SUPG, 2: EFR; method = ")
+		if method == 2:
+			N = input("N = ") #0			# deconvolution order
 
-method = 2
-#if method == 2:
-#	N = input("N = ")
-#nx = 500#input("h = 1/nx, let nx = ")
+		tstep = 20		# number of time steps
+		P = 2			# polynomial degree of FE
 
-Scale = 1
-saveTimesteps = 1 # by magnitudes of 10 so that it lines up with dt=0.01
+		#tstep = input("dt = T/tstep, let tstep = ")
+		T = 2.0*m.pi
+		dt = T/tstep
+		#k = Constant(dt)
+		# Output files directory
 
+		folder = "results/unitsquare/mu0005_P"+str(P)+"/h"+str(nx)+"_dt"+str(tstep)+"_"
 
+		t = 0
+		S = 1.0  # filtering radius factor
+		  
+		R = P
 
-for nx in [250,500]:
-	# Output files directory
-	folder = "dt01/h"+str(nx)+"_"
-	for N in [2,3]:
+		sigma = 0.01
+		mu = 0.0005
+		velocity = Expression(('cos(t)','sin(t)'), degree=R, t=t)
+		adr_f = Expression('exp(-(pow(x[0]-0.5,2)+pow(x[1]-0.5,2))/pow(0.07,2))', degree = R)
 
-		if Scale == 1:
-			S = 1.0
-		elif Scale == 2:
-			S = m.sqrt(2)
-		elif Scale == 3:
-			S = 2.0
-		else:
-			S = 5.0
+		#f_n = Expression(adr_f.cppcode, degree = R, t = t) 
+		f = Expression(adr_f.cppcode, degree = R)
 
-
-		dt = 0.01/saveTimesteps
-
-		T = 0.64
-		t = dt - dt
-
-		#S = 1.0  # filtering radius factor
-		P = 2    # polynomial degree of FE
-		R = 2
-
-		sigma = 1.0
-		mu = 10**(-6)
-		velocity = as_vector([2.0, 3.0])
-		adr_f = Expression('(-5.09295817894065e-6*x[0]*x[1]*(x[0] - 1)*(x[1] - 1)*((4000.0*x[0] - 2000.0)*(8000.0*x[0] - 4000.0) + (4000.0*x[1] - 2000.0)*(8000.0*x[1] - 4000.0))*(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0)*sin(3.14159265358979*t) + pow(pow(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0, 2) + 1, 2)*(0.318309886183791*atan(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0) - 0.5)*(-16.0*x[0]*x[1]*(x[0] - 1)*(x[1] - 1)*sin(3.14159265358979*t) - 50.2654824574367*x[0]*x[1]*(x[0] - 1)*(x[1] - 1)*cos(3.14159265358979*t) - 48.0*x[0]*x[1]*(x[0] - 1)*sin(3.14159265358979*t) - 32.0*x[0]*x[1]*(x[1] - 1)*sin(3.14159265358979*t) - 48.0*x[0]*(x[0] - 1)*(x[1] - 1)*sin(3.14159265358979*t) + 3.2e-5*x[0]*(x[0] - 1)*sin(3.14159265358979*t) - 32.0*x[1]*(x[0] - 1)*(x[1] - 1)*sin(3.14159265358979*t) + 3.2e-5*x[1]*(x[1] - 1)*sin(3.14159265358979*t)) + (pow(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0, 2) + 1)*(-10.1859163578813*x[0]*x[1]*(x[0] - 1)*(4000.0*x[0] - 2000.0)*(x[1] - 1) - 15.278874536822*x[0]*x[1]*(x[0] - 1)*(x[1] - 1)*(4000.0*x[1] - 2000.0) + 0.0407436654315252*x[0]*x[1]*(x[0] - 1)*(x[1] - 1) + 1.01859163578813e-5*x[0]*x[1]*(x[0] - 1)*(4000.0*x[1] - 2000.0) + 1.01859163578813e-5*x[0]*x[1]*(4000.0*x[0] - 2000.0)*(x[1] - 1) + 1.01859163578813e-5*x[0]*(x[0] - 1)*(x[1] - 1)*(4000.0*x[1] - 2000.0) + 1.01859163578813e-5*x[1]*(x[0] - 1)*(4000.0*x[0] - 2000.0)*(x[1] - 1))*sin(3.14159265358979*t))/pow(pow(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0, 2) + 1, 2)', degree = R, t = t)
-
-		f_n = Expression(adr_f.cppcode, degree = R, t = t) 
-		f = Expression(adr_f.cppcode, degree = R, t = t+dt)
-
+		# Load mesh and subdomains
 		mesh = UnitSquareMesh(nx,nx)
+		#mesh = RectangleMesh(Point(-5.0,-5.0), Point(5.0, 5.0), nx, nx)
 		h = CellSize(mesh)
 		Q = FunctionSpace(mesh, "CG", P)
 
@@ -60,11 +48,7 @@ for nx in [250,500]:
 		# Set up boundary condition
 		def boundary(x, on_boundary):
 			return on_boundary
-		bc = DirichletBC(Q, u_D, boundary)
-
-
-
-
+		#bc = DirichletBC(Q, u_D, boundary)
 
 		# Don't Modify Below This! -----------#
 
@@ -74,6 +58,7 @@ for nx in [250,500]:
 		u_bar = Function(Q)
 
 		# Galerkin variational problem
+
 		# Backward Euler
 		F = v*(u - u_n)*dx + dt*(mu*dot(grad(v), grad(u))*dx \
 								+ v*dot(velocity, grad(u))*dx \
@@ -82,15 +67,13 @@ for nx in [250,500]:
 
 		if method == 0:
 			methodname = "nofilter"
-			out_file_ue = File(folder+"u_exact.pvd")
-			u_exact = Expression(' 16*(-0.318309886183791*x[0]*x[1]*(-x[0] + 1)*(-x[1] + 1)*atan(2000.0*pow(x[0] - 0.5, 2) + 2000.0*pow(x[1] - 0.5, 2) - 125.0) + 0.5*x[0]*x[1]*(-x[0] + 1)*(-x[1] + 1))*sin(3.14159265358979*t) ', degree=R, t=t)
-
 
 		if method == 1:
 			methodname = "SUPG"
 			r = u - u_n + dt*(- mu*div(grad(u)) + dot(velocity, grad(u)) + sigma*u - f)
 			vnorm = sqrt(dot(velocity, velocity))
 			F += (h/(2.0*vnorm))*dot(velocity, grad(v))*r*dx
+
 
 		if method == 2:
 			# --- Begin EFR --- #
@@ -100,9 +83,7 @@ for nx in [250,500]:
 			u_tilde0 = Function(Q)
 			u_tilde1 = Function(Q)
 			u_tilde2 = Function(Q)
-			u_tilde3 = Function(Q)	
-
-
+			u_tilde3 = Function(Q)
 
 			# Define indicator function to evaluate current time step
 			def a(u_tilde, u_, t):
@@ -146,8 +127,8 @@ for nx in [250,500]:
 		L = rhs(F)
 
 		# Assemble matrices
-		A1 = assemble(a1)
-		bc.apply(A1)
+
+		#bc.apply(A1)
 
 		# Create progress bar
 		progress = Progress('Time-stepping')
@@ -161,48 +142,49 @@ for nx in [250,500]:
 		if method == 1 or method == 0:
 			out_file_ubar = File(folder+"u_"+methodname+".pvd")      # filtered solution
 			for n in range(num_steps):
-				if method == 1:
-					u_bar.rename('SUPG','SUPG')
-				else:
-					u_bar.rename('No Filter','No Filter')
+				u_bar.rename('u','u')
+				velocity.t = t
+				A1 = assemble(a1)
 				b = assemble(L)
-				bc.apply(b)
-				solve(A1, u_bar.vector(), b, "gmres")
+				#bc.apply(b)
 
-				ue = Expression(u_exact.cppcode, degree = R, t = t)
-				uee = interpolate(ue, Q)
-				uee.rename('Exact','Exact')
-				out_file_ue << (uee, float(t))
-
-				if n % saveTimesteps == 0:
-					out_file_ubar << (u_bar, float(t))
+				solve(A1, u_bar.vector(), b)
+				out_file_ubar << (u_bar, float(t))
 
 				# Update previous solution and source term
 				u_n.assign(u_bar)
 				progress.update(t / T)
 				# Update current time
+				
 				t += dt
-				f.t += dt
-				f_n.t += dt
-				u_exact.t += dt
-
 
 
 		else:
-			folder += "S"+str(Scale)
+
 			out_file_utilde = File(folder+"utilde_N"+str(N)+"_EFR.pvd")  # u tilde
 			out_file_ind = File(folder+"a_N"+str(N)+"_EFR.pvd")          # indicator function
 			out_file_ubar = File(folder+"ubar_N"+str(N)+"_EFR.pvd")      # filtered solution
 
 			for n in range(num_steps):
-				u_bar.rename('N='+str(N),'N='+str(N))
+				u_bar.rename('u','u')
 				# Step 1 Solve on Coarse Grid
+
+				velocity.t = t
+				A1 = assemble(a1)
 				b = assemble(L)
-				bc.apply(b)
-				solve(A1, u_.vector(), b, "gmres")
+				#bc.apply(b)
+				solve(A1, u_.vector(), b)
+
 
 				# Step 2a Solve Helmholtz filter
-				if N == 1:
+				if N == 0:
+					b2 = assemble(L2(u_))
+					bc = DirichletBC(Q, u_, boundary)
+					bc.apply(b2)
+					solve(A2, u_tilde0.vector(), b2, "cg")
+					DF = Expression('a', degree = R, a=u_tilde0)
+
+				elif N == 1:
 					b2_0 = assemble(L2(u_))
 					bc_0 = DirichletBC(Q, u_, boundary)
 					bc_0.apply(b2_0)
@@ -233,7 +215,7 @@ for nx in [250,500]:
 					bc_2.apply(b2_2)
 					bc_2.apply(A2)
 					solve(A2, u_tilde2.vector(), b2_2, "cg")
-					DF = Expression('3*a-3*b+c', degree = R, a=u_tilde0, b=u_tilde1, c=u_tilde2)
+					DF = Expression('3*a-3*b-c', degree = R, a=u_tilde0, b=u_tilde1, c=u_tilde2)
 				elif N == 3: # N == 3:
 					b2_0 = assemble(L2(u_))
 					bc_0 = DirichletBC(Q, u_, boundary)
@@ -258,38 +240,31 @@ for nx in [250,500]:
 					bc_3.apply(b2_3)
 					bc_3.apply(A2)
 					solve(A2, u_tilde3.vector(), b2_3, "cg")
-					DF = Expression('4*a-6*b+4*c-d', degree = R, a=u_tilde0, b=u_tilde1, c=u_tilde2, d=u_tilde3)
-				else: # N=0
-					b2 = assemble(L2(u_))
-					bc.apply(b2)
-					bc.apply(A2)
-					solve(A2, u_tilde0.vector(), b2, "cg")
-					DF = Expression('a', degree = R, a=u_tilde0)
+					DF = Expression('4*a-6*b+2*c-d', degree = R, a=u_tilde0, b=u_tilde1, c=u_tilde2, d=u_tilde3)
+				else:
+					print('N must be either 0,1,2, or 3.')
 
 				# Step 2b Calculate Indicator and solve Ind Problem
 				ind = a(DF, u_, float(t))
 
 				A3 = assemble(a3(ind))
-				bc.apply(A3)
+				#bc.apply(A3)
 
 				b3 = assemble(L3)
-				bc.apply(b3)
+				#bc.apply(b3)
 
 				solve(A3, u_bar.vector(), b3, "gmres")    
 				out_file_ind << (ind, float(t))
 
 				progress.update(t / T)
-				if n % saveTimesteps == 0:
-					out_file_ubar << (u_bar, float(t))
+
+				out_file_ubar << (u_bar, float(t))
 
 				# Update previous solution and source term
 				u_n.assign(u_bar)
 
 				# Update current time
 				t += dt
-				f.t += dt
-				f_n.t += dt
-
 
 		print(methodname+" ")
 		if method == 2: 

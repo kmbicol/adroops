@@ -6,7 +6,7 @@ import time
 # Load mesh and subdomains
 method = input("0: No Filter, 1: SUPG, 2: EFR; method = ")
 if method == 2:
-	N = input("N = 0 or 1, N = ")
+	N = input("N = 0,1,2,3; N = ")
 #nx = input("h = 1/nx, let nx = ")
 nx = 20
 dt = 0.01
@@ -15,13 +15,13 @@ T = 1.0
 t = dt - dt
 
 S = 1.0  # filtering radius factor
-P = 2    # polynomial degree of FE
-R = 2
+P = 1    # polynomial degree of FE
+R = P
 
 sigma = 0.01
 mu = 0.001
 velocity = as_vector([1.0, 1.0])
-f  = Expression('t', degree=R, t=t)
+f  = Expression('1.0', degree=R, t=t)
 
 mesh = UnitSquareMesh(nx,nx)
 h = CellSize(mesh)
@@ -39,7 +39,7 @@ bc = DirichletBC(Q, u_D, boundary)
 
 # Output files directory
 
-folder = "results/h"+str(nx)+"_"
+folder = "f1/h"+str(nx)+"_"
 
 
 # Don't Modify Below This! -----------#
@@ -72,8 +72,8 @@ if method == 2:
 
 	u_tilde0 = Function(Q)
 	u_tilde1 = Function(Q)
-
-
+	u_tilde2 = Function(Q)
+	u_tilde3 = Function(Q)
 
 	# Define indicator function to evaluate current time step
 	def a(u_tilde, u_, t):
@@ -171,9 +171,54 @@ else:
 			bc_1.apply(A2)
 			solve(A2, u_tilde1.vector(), b2_1, "cg")
 			DF = Expression('2*a-b', degree = R, a=u_tilde0, b=u_tilde1)
+		elif N == 2:
+			b2_0 = assemble(L2(u_))
+			bc_0 = DirichletBC(Q, u_, boundary)
+			bc_0.apply(b2_0)
+			bc_0.apply(A2)
+			solve(A2, u_tilde0.vector(), b2_0, "cg")
+
+			b2_1 = assemble(L2(u_tilde0))
+			bc_1 = DirichletBC(Q, u_tilde0, boundary)
+			bc_1.apply(b2_1)
+			bc_1.apply(A2)
+			solve(A2, u_tilde1.vector(), b2_1, "cg")
+
+			b2_2 = assemble(L2(u_tilde1))
+			bc_2 = DirichletBC(Q, u_tilde1, boundary)
+			bc_2.apply(b2_2)
+			bc_2.apply(A2)
+			solve(A2, u_tilde2.vector(), b2_2, "cg")
+			DF = Expression('3*a-3*b-c', degree = R, a=u_tilde0, b=u_tilde1, c=u_tilde2)
+		elif N == 3: # N == 3:
+			b2_0 = assemble(L2(u_))
+			bc_0 = DirichletBC(Q, u_, boundary)
+			bc_0.apply(b2_0)
+			bc_0.apply(A2)
+			solve(A2, u_tilde0.vector(), b2_0, "cg")
+
+			b2_1 = assemble(L2(u_tilde0))
+			bc_1 = DirichletBC(Q, u_tilde0, boundary)
+			bc_1.apply(b2_1)
+			bc_1.apply(A2)
+			solve(A2, u_tilde1.vector(), b2_1, "cg")
+
+			b2_2 = assemble(L2(u_tilde1))
+			bc_2 = DirichletBC(Q, u_tilde1, boundary)
+			bc_2.apply(b2_2)
+			bc_2.apply(A2)
+			solve(A2, u_tilde2.vector(), b2_2, "cg")
+
+			b2_3 = assemble(L2(u_tilde2))
+			bc_3 = DirichletBC(Q, u_tilde2, boundary)
+			bc_3.apply(b2_3)
+			bc_3.apply(A2)
+			solve(A2, u_tilde3.vector(), b2_3, "cg")
+			DF = Expression('4*a-6*b+4*c-d', degree = R, a=u_tilde0, b=u_tilde1, c=u_tilde2, d=u_tilde3)
 		else: # N=0
 			b2 = assemble(L2(u_))
 			bc.apply(b2)
+			bc.apply(A2)
 			solve(A2, u_tilde0.vector(), b2, "cg")
 			DF = Expression('a', degree = R, a=u_tilde0)
 
