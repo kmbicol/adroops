@@ -1,0 +1,73 @@
+EFR N = 0, t = 0.0
+
+Level 1, nx = 50, delta = 1.0
+a,1
+c,3
+b,2
+
+Level 2, nx = 100, delta = 1.0
+a,1
+c,3
+b,2
+
+Level 3, nx = 200, delta = 1.0
+a,1
+c,3
+b,2
+
+Level 4, nx = 400, delta = 1.0
+a,1
+c,3
+b,2
+
+Level 5, nx = 800, delta = 1.0
+a,1
+c,3
+b,2
+EFR N = 0, t = 0.0
+
+Level 1, nx = 50, delta = 1.0
+a,1
+c,3
+b,2
+
+Level 2, nx = 100, delta = 1.0
+a,1
+c,3
+b,2
+
+Level 3, nx = 200, delta = 1.0
+a,1
+c,3
+b,2
+
+Level 4, nx = 400, delta = 1.0
+a,1
+c,3
+b,2
+
+Level 5, nx = 800, delta = 1.0
+a,1
+c,3
+b,2
+EFR N = 0, t = 0.0
+
+Level 1, nx = 50, delta = 1.0
+a,1
+c,3
+b,2
+
+Level 2, nx = 100, delta = 1.0
+a,1
+c,3
+b,2
+
+Level 3, nx = 200, delta = 1.0
+a,1
+c,3
+b,2
+
+Level 4, nx = 400, delta = 1.0
+a,1
+c,3
+b,2
