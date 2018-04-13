@@ -67,7 +67,7 @@ def a(u_tilde, u_, t):
 	return indicator
 
 
-for nx in [50,100,200,400,800]: 
+for nx in [50,100,200,400]:#,800]: 
 	myfile = '0405_delta0.1.csv'
 	delta = 0.1 #S*1.0/nx
 

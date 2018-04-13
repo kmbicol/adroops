@@ -1,7 +1,6 @@
 # copied from ipython notebook EFR
 
-import matplotlib 
-import matplotlib.pyplot as plt
+
 from dolfin import *
 import math as m
 import numpy as np

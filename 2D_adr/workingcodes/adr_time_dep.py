@@ -36,7 +36,7 @@ mesh = UnitSquareMesh(nx,nx)
 mesh_file = File("mesh.pvd")
 mesh_file << mesh
 
-h = CellSize(mesh)
+h = CellDiameter(mesh)
 
 # Create FunctionSpaces
 Q = FunctionSpace(mesh, "CG", P)

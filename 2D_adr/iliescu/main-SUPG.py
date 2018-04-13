@@ -12,15 +12,16 @@ import time
 #	N = input("N = ")
 #nx = 500#input("h = 1/nx, let nx = ")
 method = 1
+timesteps = 10
 
 for dt in [0.01, 0.001]:
-	for nx in [200,500]:
+	for nx in [200]:
 		# Output files directory
 		#dt = 0.01
 
 		T = 0.64
 		t = dt - dt
-		folder = "SUPG/mod_dt"+str(dt)+"h"+str(nx)+"_"
+		folder = "SUPG/dt"+str(dt)[2:]+"h"+str(nx)+"_"
 		#S = 1.0  # filtering radius factor
 		P = 2    # polynomial degree of FE
 		R = 2
@@ -72,11 +73,13 @@ for dt in [0.01, 0.001]:
 
 		if method == 1:
 			methodname = "SUPG"
-			r = u - u_n + dt*(- mu*div(grad(u)) + dot(velocity, grad(u)) + sigma*u - f)
+			Lt = -mu*div(grad(u)) + dot(velocity, grad(u)) + (sigma+1.0/dt)*u 
+			ft = u_/dt + f			
+			r = ft - Lt
 			vnorm = sqrt(dot(velocity, velocity))
 			#F += (h/(2.0*vnorm))*dot(velocity, grad(v))*r*dx
 			#F += (h*m.sqrt(2))*dot(velocity, grad(v))*r*dx
-			F += dt*(h/(2.0*vnorm))*dot(velocity, grad(v))*r*dx
+			F -= (h/(2.0*vnorm))*dot(velocity, grad(v))*r*dx
 
 		# Create bilinear and linear forms
 		a1 = lhs(F)
@@ -108,8 +111,8 @@ for dt in [0.01, 0.001]:
 				bc.apply(b)
 				solve(A1, u_bar.vector(), b, "gmres")
 
-				
-				out_file_ubar << (u_bar, float(t+dt))
+				if n % timesteps == 0:
+					out_file_ubar << (u_bar, float(t+dt))
 
 				# Update previous solution and source term
 				u_n.assign(u_bar)
