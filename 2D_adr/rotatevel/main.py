@@ -6,12 +6,12 @@ import time
 #method = input("method: (0) no filter (1) supg (2) efr")		# 0: no filter, 1: supg, 2: efr
 #nx = input("h = 1/nx, let nx = ")
 for method in [0,1]:
-	for nx in [750]:
+	for nx in [300]:
 
 		if method == 2:
 			N = input("N = ") #0			# deconvolution order
 
-		tstep = 20		# number of time steps
+		tstep = 100*m.pi		# number of time steps
 		P = 2			# polynomial degree of FE
 
 		#tstep = input("dt = T/tstep, let tstep = ")
@@ -20,7 +20,7 @@ for method in [0,1]:
 		#k = Constant(dt)
 		# Output files directory
 
-		folder = "results/unitsquare/mu0005_P"+str(P)+"/h"+str(nx)+"_dt"+str(tstep)+"_"
+		folder = "results/mu0005_P"+str(P)+"/h"+str(nx)+"_dt"+str(tstep)+"_"
 
 		t = 0
 		S = 1.0  # filtering radius factor
