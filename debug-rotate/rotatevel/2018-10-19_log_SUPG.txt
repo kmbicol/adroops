@@ -1,0 +1,94 @@
+SUPG, dt=0.1, T=3, P2
+start: 07:24:42 AM
+
+25,0.1,1.24722202843e+15,2.01873752953e+16,5.4998133295e+14,-1.89524619123e+16
+
+end: 07:24:43 AM
+
+SUPG, dt=0.1, T=3, P2
+start: 07:24:43 AM
+
+50,0.1,1.56239861534e+34,3.08919281669e+35,3.44986797588e+33,-2.94920480299e+35
+
+end: 07:24:47 AM
+
+SUPG, dt=0.1, T=3, P2
+start: 07:26:07 AM
+
+25,0.1,0.0263562035263,0.354497187696,0.12074198708,-0.0112362356707
+
+end: 07:26:09 AM
+
+
+ SUPG: BDF2 using P2 and halving timestep at each refinement level 
+
+SUPG, dt=0.1, T=3, P2
+start: 07:26:09 AM
+
+50,0.1,0.0264007452718,0.356858054542,0.121574766758,-0.0112168949904
+
+end: 07:26:15 AM
+
+
+ SUPG: BDF2 using P2 and halving timestep at each refinement level 
+
+SUPG, dt=0.1, T=3, P2
+start: 07:26:15 AM
+
+400,0.1,0.0264024709461,0.356931787527,0.121577354681,-0.0112647720418
+
+end: 07:33:54 AM
+
+
+ SUPG: BDF2 using P2 and halving timestep at each refinement level 
+
+SUPG, dt=0.1, T=3, P2
+start: 07:33:54 AM
+
+25,0.1,0.0258242254299,0.336941867292,0.117730438746,-0.00978508234113
+
+end: 07:33:57 AM
+
+
+ SUPG: BDF2 using P2 and halving timestep at each refinement level 
+
+SUPG, dt=0.1, T=3, P2
+start: 07:33:57 AM
+
+50,0.1,0.0258644378923,0.339041283103,0.118789515354,-0.00980715305233
+
+end: 07:34:03 AM
+
+
+ SUPG: BDF2 using P2 and halving timestep at each refinement level 
+
+SUPG, dt=0.1, T=3, P2
+start: 07:34:03 AM
+
+100,0.1,0.0258662695755,0.339151447167,0.118757645703,-0.00982970726395
+
+end: 07:34:26 AM
+
+
+ SUPG: BDF2 using P2 and halving timestep at each refinement level 
+
+SUPG, dt=0.1, T=3, P2
+start: 07:34:26 AM
+
+200,0.1,0.025866262258,0.339162078482,0.118757441109,-0.00983669093552
+
+end: 07:36:05 AM
+
+
+ SUPG: BDF2 using P2 and halving timestep at each refinement level 
+
+SUPG, dt=0.1, T=3, P2
+start: 07:36:05 AM
+
+400,0.1,0.0258662078603,0.339166095356,0.118765575714,-0.00984066733173
+
+end: 07:44:36 AM
+
+
+ SUPG: BDF2 using P2 and halving timestep at each refinement level 
+
