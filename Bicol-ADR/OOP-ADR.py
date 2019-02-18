@@ -23,7 +23,7 @@ class SimADR(object):
     degree = 2              # degree of finite element (Expressions will be degree+1)
     gridSize = [25, 50, 100, 200, 400] # nx
     timeSize = [0.1, 0.01, 0.001]       # dt
-    NeedsDirBC = ['HeatSim', 'RisingHumpSim']  # by default Neuman BC (free BC)
+    NeedsDirBC = ['HeatSim', 'RisingHumpSim', 'SwirlSim']  # by default Neuman BC (free BC)
     saveEvery = 10
     
     def __init__(self, method):
@@ -201,8 +201,8 @@ class SimADR(object):
                     self.computeExtrema(self.u_)
             
             # Update initial conditions
-            self.u_n0 = self.u_n1
-            self.u_n1 = self.u_
+            self.u_n0.assign(self.u_n1)
+            self.u_n1.assign(self.u_)
             it += 1
             
         # save last time step
