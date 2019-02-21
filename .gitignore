@@ -1,4 +1,5 @@
 # FEniCS data files
+research/
 *.pvd
 *.vtu
 *.csv
