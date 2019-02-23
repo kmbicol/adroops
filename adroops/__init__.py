@@ -1,3 +1,4 @@
+# %load ../__init__.py
 ## Program Details
 # Time Discretization: BDF2
 import pickle
@@ -155,20 +156,23 @@ class SimADR(object):
         Sets all variables, formulations, and other simulation parameters. 
         
         """
+        self.t = 0.0 # Start Time
+
+        
         # Create progress bar
         self.progress = Progress('Time-stepping')
         set_log_level(PROGRESS)
+
+
+        self.modelSetup(nx)
 
         if self.method == 'EFR':
             # recall: self.method = ['EFR', N, chi_order]
             self.autosetEFRParam(nx, dt)
 
         self.createOutput(nx, dt)
-        self.t = 0.0 # Start Time
 
-        self.modelSetup(nx)
-#         u_ = self.u_
-            
+        
         self.opSetup(nx, dt)
         
         self.progress.update(self.t / self.T)
@@ -286,7 +290,12 @@ class SimADR(object):
         # eta: finest mesh (kolmogorov scale)
 
         alpha = 2.0 # BDF2
-        eta = 1.0/400 # approximately, might need to check which nx gives NO oscillations
+        ## How to set eta? BQ paper, p. 3 says that a mesh is considered refined enough when the local Peclet number (see p. 3 of our paper, revised version) is < 1
+        
+        W = VectorFunctionSpace(self.mesh, "CG", self.degree)
+        b = interpolate(self.velocity, W)
+        eta = 2*self.mu/norm(b.vector(),'linf')
+        self.eta = eta
         chi_order = self.chi_order
         # uses approximation grad_h = 1/h
         if chi_order == 1:
@@ -495,7 +504,7 @@ class RisingHumpSim(SimADR):
     def __init__(self, method):
         SimADR.__init__(self, method)
         self.folder = self.basefolder + self.ex + '/'
-        self.saveEvery = 25
+        self.saveEvery = 10
                 
 class HeatSim(SimADR):
     # Heat Example from FEniCS documentation
