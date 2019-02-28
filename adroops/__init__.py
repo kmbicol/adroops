@@ -224,18 +224,21 @@ class SimADR(object):
     def testGridConv(self):
         dt = 0.01
         self.folder += 'gridConvStudy/'
-        L2norms = np.zeros(len(iliescu.gridSize))
-        H1norms = np.zeros(len(iliescu.gridSize))
-        maxs = np.zeros(len(iliescu.gridSize))
-        mins = np.zeros(len(iliescu.gridSize))
+        self.L2norms = np.zeros(len(self.gridSize))
+        self.H1norms = np.zeros(len(self.gridSize))
+        self.maxs = np.zeros(len(self.gridSize))
+        self.mins = np.zeros(len(self.gridSize))
         index = 0
         for nx in self.gridSize:
             self.runSim(nx,dt)
             # errors computed at end simulation time T
             print self.T
-            L2norms[index], H1norms[index] = self.computeErrors(self.u_)
-            maxs[index], mins[index] = self.computeExtrema(self.u_)
+            self.L2norms[index], self.H1norms[index] = self.computeErrors(self.u_)
+            self.maxs[index], self.mins[index] = self.computeExtrema(self.u_)
             index += 1
+        self.plotErr(self.L2norms, self.H1norms)
+        self.plotExtrema(self.maxs,'max')
+        self.plotExtrema(self.mins,'min')
             
     def testChi(self):
         self.folder += 'chiStudy/'
@@ -452,6 +455,7 @@ class SimADR(object):
 
         plt.grid()
         plt.show()
+        fig.savefig('Extrema for '+self.ex+':'+self.method+'.png')
 
 
     def plotExtrema(self, Extr, Type):
@@ -465,13 +469,15 @@ class SimADR(object):
 
         plt.plot([0,1,2,3,4], Extr,'ro-',label = 'E')
         plt.xlabel('Refinement Level, $\ell$')
-        plt.ylabel(Type + '$(u_h)$')
+        plt.ylabel('$'+Type+'(u_h)$')
         plt.legend(loc='best', borderaxespad=0.)
         plt.grid()
         ax = fig.gca()
         ax.set_xticks(np.arange(0, 5, 1.0))
         ax.set_yticks(np.arange(np.min(Extr), np.max(Extr), 0.2))
         plt.show()
+
+        fig.savefig('Extrema for '+self.ex+':'+self.method+'.png')
 
 
 ##################################################################################
@@ -580,11 +586,11 @@ class TwoSourceSim(SimADR):
 class BlankSim(SimADR):
     # How to define NEW example simulation from scratch
 
-    def __init__(self, method, ex, T, velocity, mu, sigma, saveExact, sourceFn, uExact):
+    def __init__(self, method, ex, T, velocityExpr, mu, sigma, saveExact, sourceFn, uExact):
 
         SimADR.__init__(self,method)    # String: method can be Galerk, SUPG, EFR
         self.T = T                      # Scalar: total simulation time, 2*np.pi
-        self.velocity = velocity        # Expression: advective velocity vector, Expression(('cos(t)','sin(t)'), degree = SimADR.degree, t = 0)
+        self.velocity = Expression(velocityExpr, degree = SimADR.degree, t = 0)        # Expression: advective velocity vector, Expression(('cos(t)','sin(t)'), degree = SimADR.degree, t = 0)
         self.mu = mu                    # Scalar: reaction coefficient, 0.005
         self.sigma = sigma              # Scalar: diffusivity coefficient, 0.01
         self.ex = ex                    # String: name of directory for pvd files, 'SubfolderSimName'
