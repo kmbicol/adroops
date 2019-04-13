@@ -44,8 +44,8 @@ class SimADR(object):
 
         if self.method == 'EFR':
             methodname = self.method
-            self.save_indicator = File(self.folder+str(dt)+"_"+methodname+"_N"+str(self.N)+"_delta"+str(self.delta)+"_chi_order"+str(self.chi_order)+"_ind_"+str(nx)+".pvd")
-            self.save_ubar = File(self.folder+str(dt)+"_"+methodname+"_N"+str(self.N)+"_delta"+str(self.delta)+"_chi_order"+str(self.chi_order)+"_u_"+str(nx)+".pvd")
+            self.save_indicator = File(self.folder+str(dt)+"_"+methodname+"_N"+str(self.N)+"_delta"+str(self.delta)+"_chi_method"+str(self.chi_method)+"_ind_"+str(nx)+".pvd")
+            self.save_ubar = File(self.folder+str(dt)+"_"+methodname+"_N"+str(self.N)+"_delta"+str(self.delta)+"_chi_method"+str(self.chi_method)+"_u_"+str(nx)+".pvd")
         else:
             methodname = self.method
             self.save_ubar = File(self.folder+str(dt)+"_"+methodname+"_u_"+str(nx)+".pvd")
@@ -167,7 +167,7 @@ class SimADR(object):
         self.modelSetup(nx)
 
         if self.method == 'EFR':
-            # recall: self.method = ['EFR', N, chi_order]
+            # recall: self.method = ['EFR', N, chi_method]
             self.autosetEFRParam(nx, dt)
 
         self.createOutput(nx, dt)
@@ -240,15 +240,15 @@ class SimADR(object):
         self.plotExtrema(self.maxs,'max')
         self.plotExtrema(self.mins,'min')
             
-    def testChi(self):
+    def testChi(self, nx):
         self.folder += 'chiStudy/'
         for N in [0,1,2,3]:
             print('N = '+str(N))
             self.N = N
-            for chi_order in [0,1,2]:
-                print('chi_order = '+str(chi_order))
-                self.chi_order = chi_order
-                self.runSim(nx = 100,dt = 0.01)
+            for chi_method in [0,1,2,'BQ']:
+                print('chi_method = '+str(chi_method))
+                self.chi_method = chi_method
+                self.runSim(nx = nx,dt = 0.01)
 
     def computeErrors(self, u):
         # only works if you have the exact solution
@@ -283,32 +283,44 @@ class SimADR(object):
 
     def autosetEFRParam(self, nx, dt):
         # set EFR parameters based on nx
+        # Based on BQ 2018: best delta = h_min = 1.0/nx
         self.delta = 1.0/nx
-        # already stored: self.N, self.chi_order
+
+        # already stored: self.N, self.chi_method
+        
         ## according to APR derivation
         # Dr. Q, what h do we use? the big diameter or shortest edge?
         # BQV paper states "mesh size of h" so let's assume h = mesh diameter
 
         # alpha: coefficient in front of u at t^(n+1)
-        # eta: finest mesh (kolmogorov scale)
+        # eta: finest mesh (kolmogorov scale); eta is defined as when local Pe < 1
 
-        alpha = 2.0 # BDF2
+        alpha = 1.5 # BDF2
         ## How to set eta? BQ paper, p. 3 says that a mesh is considered refined enough when the local Peclet number (see p. 3 of our paper, revised version) is < 1
         
         W = VectorFunctionSpace(self.mesh, "CG", self.degree)
         b = interpolate(self.velocity, W)
         eta = 2*self.mu/norm(b.vector(),'linf')
         self.eta = eta
-        chi_order = self.chi_order
+        chi_method = self.chi_method
+        if chi_method == 0:
+            self.chi = 1
         # uses approximation grad_h = 1/h
-        if chi_order == 1:
+        elif chi_method == 1:
             self.chi = (self.mu/(alpha*self.delta**2))*(float(self.h)/eta - 1)*dt
         # uses approximation laplace_h = 1/h^2
-        elif chi_order == 2:
+        elif chi_method == 2:
             self.chi = (self.mu/(alpha*self.delta**2))*(float(self.h)**2/eta**2 - 1)*dt
-        else: # default sets chi according to nx
-            chi_dict = {'25': 1, '50': 0.5, '100': .25, '200': 1.0/16., '400': 1.0/256.}
+        elif chi_method == 'BQ': # default sets chi according to nx
+            chi_dict = {'10': 1.0, '20': 1.0,'25': 1.0, '50': 0.5, '100': .25, '200': 1.0/16., '400': 1.0/256.}
             self.chi = chi_dict.get(str(nx))
+        else:
+            print('chi_method options: 0,1,2, "BQ"')
+
+        print('EFR Parameters: \nN = '+str(self.N)+', delta = '+str(self.delta)+ ...
+            ', chi_method = ' + str(chi_method) + ', chi = '+str(self.chi) + ...
+            '\n Simulation Parameters: \neta = '+str(eta)+', h = '+str(self.h)+', dt = ' + string(self.dt) +...
+            '\n')
 
     def setEFRParam(self, delta, N, chi):
         # manually set EFR parameters
