@@ -1,0 +1,7 @@
+# run: conda env create --file environment.yml
+name: adroops
+dependencies:
+- python=2.7
+- anaconda
+- pip
+- fenics

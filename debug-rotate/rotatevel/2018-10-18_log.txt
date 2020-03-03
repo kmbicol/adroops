@@ -1,0 +1,56 @@
+E, dt=0.1, T=6.0, P2
+start: 09:14:00 PM
+
+25,0.1,5.00471459475e+35,8.20899497021e+36,3.70465381237e+35,-7.41624278401e+36
+
+end: 09:14:03 PM
+
+
+ Evolve only: BDF2 using P2 and halving timestep at each refinement level 
+
+E, dt=0.1, T=6.0, P2
+start: 09:14:03 PM
+
+50,0.1,7.84019439091e+77,1.5434054514e+79,4.08602027008e+77,-1.44054845955e+79
+
+end: 09:14:16 PM
+
+
+ Evolve only: BDF2 using P2 and halving timestep at each refinement level 
+
+E, dt=0.1, T=6.0, P2
+start: 09:14:45 PM
+
+25,0.1,5.00471459475e+35,8.20899497021e+36,3.70465381237e+35,-7.41624278401e+36
+
+end: 09:14:48 PM
+
+
+ Evolve only: BDF2 using P2 and halving timestep at each refinement level 
+
+E, dt=0.1, T=6.0, P2
+start: 09:14:48 PM
+
+50,0.1,7.84019439091e+77,1.5434054514e+79,4.08602027008e+77,-1.44054845955e+79
+
+end: 09:15:01 PM
+
+
+ Evolve only: BDF2 using P2 and halving timestep at each refinement level 
+
+E, dt=0.1, T=6.0, P2
+start: 09:15:01 PM
+
+100,0.1,1.95300866111e+81,2.40981384215e+83,6.62224745077e+82,-8.64234342698e+82
+
+end: 09:15:42 PM
+
+
+ Evolve only: BDF2 using P2 and halving timestep at each refinement level 
+
+E, dt=0.1, T=6.0, P2
+start: 09:14:16 PM
+
+E, dt=0.1, T=6.0, P2
+start: 09:15:42 PM
+

@@ -1,0 +1,80 @@
+SUPG, dt=0.01, T=3, P2
+start: 10:25:13 PM
+
+25,0.01,0.0258041175058,0.37404734882,0.121356429799,-0.00102125312213
+
+end: 10:25:50 PM
+
+
+ SUPG: BDF2 using P2 and halving timestep at each refinement level 
+
+SUPG, dt=0.01, T=3, P2
+start: 10:25:50 PM
+
+50,0.01,0.0258697297501,0.37841692707,0.121674123959,-8.55871911723e-07
+
+end: 10:27:06 PM
+
+
+ SUPG: BDF2 using P2 and halving timestep at each refinement level 
+
+SUPG, dt=0.01, T=3, P2
+start: 10:27:06 PM
+
+100,0.01,0.0258725380785,0.37858148268,0.121783066498,-1.91391945371e-06
+
+end: 10:32:50 PM
+
+
+ SUPG: BDF2 using P2 and halving timestep at each refinement level 
+
+SUPG, dt=0.01, T=3, P2
+start: 10:32:50 PM
+
+200,0.01,0.0258726310523,0.37858480238,0.121784230463,-2.1180132102e-06
+
+end: 10:53:49 PM
+
+
+ SUPG: BDF2 using P2 and halving timestep at each refinement level 
+
+SUPG, dt=0.01, T=3, P2
+start: 10:53:49 PM
+
+25,0.01,0.0203116709187,0.298820341337,0.110461924446,-0.00051322254261
+
+end: 10:54:17 PM
+
+
+ SUPG: BDF2 using P2 and halving timestep at each refinement level 
+
+SUPG, dt=0.01, T=3, P2
+start: 10:54:17 PM
+
+50,0.01,0.0203517348656,0.301253063967,0.109637273193,-6.87963252132e-07
+
+end: 10:55:32 PM
+
+
+ SUPG: BDF2 using P2 and halving timestep at each refinement level 
+
+SUPG, dt=0.01, T=3, P2
+start: 10:55:32 PM
+
+100,0.01,0.0203534245732,0.30133437123,0.109514502349,-9.04108991982e-07
+
+end: 11:00:30 PM
+
+
+ SUPG: BDF2 using P2 and halving timestep at each refinement level 
+
+SUPG, dt=0.01, T=3, P2
+start: 11:00:30 PM
+
+200,0.01,0.0203534733002,0.301335302643,0.109504137857,-1.00048001375e-06
+
+end: 11:18:46 PM
+
+
+ SUPG: BDF2 using P2 and halving timestep at each refinement level 
+

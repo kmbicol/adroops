@@ -1,0 +1,40 @@
+
+delta = 1.0
+u_exact = Expression('sin(DOLFIN_PI*x[0])*cos(DOLFIN_PI*x[1])', degree = R)
+u_ = Expression('sin(DOLFIN_PI*x[0])*cos(DOLFIN_PI*x[1]) + 2*pow(DOLFIN_PI, 2)*sin(DOLFIN_PI*x[0])*cos(DOLFIN_PI*x[1])', degree=R)
+
+For level 5, got the following error:
+
+PETSc Krylov solver starting to solve 2563201 x 2563201 system.
+
+UMFPACK V5.7.6 (May 4, 2016): ERROR: out of memory
+
+Traceback (most recent call last):
+  File "filter_test.py", line 144, in <module>
+    solve(A2, u_tilde0.vector(), b2_0)#, "cg")
+  File "/home/kmbicol/anaconda2/envs/fenics/lib/python2.7/site-packages/dolfin/fem/solving.py", line 310, in solve
+    return cpp.la_solve(*args)
+  File "/home/kmbicol/anaconda2/envs/fenics/lib/python2.7/site-packages/dolfin/cpp/la.py", line 4140, in la_solve
+    return _la.la_solve(*args)
+RuntimeError: 
+
+*** -------------------------------------------------------------------------
+*** DOLFIN encountered an error. If you are not able to resolve this issue
+*** using the information listed below, you can ask for help at
+***
+***     fenics-support@googlegroups.com
+***
+*** Remember to include the error message listed below and, if possible,
+*** include a *minimal* running example to reproduce the error.
+***
+*** -------------------------------------------------------------------------
+*** Error:   Unable to successfully call PETSc function 'KSPSolve'.
+*** Reason:  PETSc error code is: 76 (Error in external library).
+*** Where:   This error was encountered inside /feedstock_root/build_artefacts/fenics_1514906081531/work/dolfin-2017.2.0.post0/dolfin/la/PETScKrylovSolver.cpp.
+*** Process: 0
+*** 
+*** DOLFIN version: 2017.2.0
+*** Git changeset:  eff8a933c8ffe6b1204735d58ff25c5b75741fbe
+*** -------------------------------------------------------------------------
+
+Aborted (core dumped)
